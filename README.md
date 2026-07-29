@@ -72,7 +72,7 @@ Edit the hidden `.config.json` with your target `HOST` and an array of configure
 
 ## 1. Submission Creator (`create-submission.py`)
 
-Handles creating submissions, dynamically parsing available submission types from the server, selecting/initializing the type, and uploading custom form details.
+Handles creating submissions, dynamically parsing available business units and submission types from the server, selecting/initializing the type, and uploading custom form details.
 
 ### Custom Payloads (`submission-payloads/`)
 * Put your custom JSON payload as `<typeId>.json` (e.g. `101.json` for *Internal Transfer Requests*).
@@ -87,6 +87,7 @@ Handles creating submissions, dynamically parsing available submission types fro
 | Flag | Long Option | Description |
 |---|---|---|
 | `-y` | `--yes` | Bypasses the target host and authorization cookie confirmation prompt. |
+| `-b` | `--unit <unit>` | Directly specifies the business unit ID or Label, skipping the business unit prompt. |
 | `-t` | `--title <title>` | Directly specifies the submission title, skipping the title prompt. |
 | `-s` | `--type <type>` | Directly specifies the type ID or Label, skipping the type prompt. |
 | `-u` | `--user <username>` | Directly specifies which username to select from configuration (skips user prompt). |
@@ -95,7 +96,7 @@ Handles creating submissions, dynamically parsing available submission types fro
 
 ## 2. Meeting Creator (`create-meeting.py`)
 
-Handles creating meetings, dynamically parsing meeting types from the server, initializing the meeting, saving meeting details (Subject and Quorum), and adding available submissions to the meeting agenda.
+Handles creating meetings, dynamically parsing business units and meeting types from the server, initializing the meeting, saving meeting details (Subject and Quorum), and adding available submissions to the meeting agenda.
 
 ### Custom Payloads (`meeting-payloads/`)
 * Put your custom JSON payload as `<typeId>.json` (e.g. `101.json` for *Internal*).
@@ -116,6 +117,7 @@ Handles creating meetings, dynamically parsing meeting types from the server, in
 | Flag | Long Option | Description |
 |---|---|---|
 | `-y` | `--yes` | Bypasses the target host and authorization cookie confirmation prompt. |
+| `-b` | `--unit <unit>` | Directly specifies the business unit ID or Label, skipping the business unit prompt. |
 | `-s` | `--type <type>` | Directly specifies the meeting type ID or Label, skipping the type prompt. |
 | `-t` | `--subject <text>`| Directly specifies the meeting subject, skipping the subject prompt. |
 | `-q` | `--quorum <text>` | Directly specifies the meeting quorum, skipping the quorum prompt. |
@@ -131,14 +133,14 @@ Handles creating meetings, dynamically parsing meeting types from the server, in
 ```bash
 ./create-meeting.py
 ```
-This guides you through user selection, confirming credentials, choosing meeting types, entering meeting details, adding agenda items, and publishing the meeting.
+This guides you through user selection, confirming credentials, choosing the business unit (automatically skipped if only one is available), choosing meeting types, entering meeting details, adding agenda items, and publishing the meeting.
 
 ### B. Fully Automated Execution (No Prompts)
 Perfect for automation, scripts, or CI/CD pipelines. This runs instantly without prompting for any user input:
 ```bash
-# Automated Submission creation with specific user
-./create-submission.py -u SystemAdmin -y -t "My Automated Submission" -s 101
+# Automated Submission creation with specific user and business unit
+./create-submission.py -u SystemAdmin -y -b "HR Committee" -t "My Automated Submission" -s 101
 
-# Automated Meeting creation with specific user, automatic agenda items, and publication
-./create-meeting.py -u NormalUser -y -s 101 -t "Sync Meeting" -q "3" -a "1,2" --publish
+# Automated Meeting creation with specific user, automatic business unit, meeting type, agenda items, and publication
+./create-meeting.py -u NormalUser -y -b "HR Committee" -s 101 -t "Sync Meeting" -q "3" -a "1,2" --publish
 ```

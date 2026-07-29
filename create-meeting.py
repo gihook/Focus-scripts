@@ -3,6 +3,7 @@ import argparse
 import json
 import os
 import sys
+import time
 import urllib.request
 import urllib.error
 
@@ -112,6 +113,11 @@ def parse_arguments():
         help="Specify the meeting type ID or Label directly (skips the type prompt)"
     )
     parser.add_argument(
+        '-b', '--unit',
+        type=str,
+        help="Specify the business unit ID or Label directly (skips the unit prompt)"
+    )
+    parser.add_argument(
         '-t', '--subject',
         type=str,
         help="Specify the meeting subject directly (skips the subject prompt)"
@@ -144,6 +150,16 @@ def extract_type_options(create_response):
         controls = section.get("formControls", [])
         for ctrl in controls:
             if ctrl.get("key") == "typeId":
+                props = ctrl.get("props", {})
+                return props.get("options", [])
+    return []
+
+def extract_unit_options(create_response):
+    form_sections = create_response.get("formSections", [])
+    for section in form_sections:
+        controls = section.get("formControls", [])
+        for ctrl in controls:
+            if ctrl.get("key") == "unitId":
                 props = ctrl.get("props", {})
                 return props.get("options", [])
     return []
@@ -238,6 +254,62 @@ def main():
         sys.exit(1)
     print(f" -> Success! Created Meeting ID: {meeting_id}")
 
+    # Extract Business Unit (unitId) Options from the response
+    unit_options = extract_unit_options(res)
+    selected_unit_id = None
+    selected_unit_label = None
+
+    if args.unit is not None:
+        search_term = args.unit.strip().lower()
+        for option in unit_options:
+            if str(option.get('id')) == search_term or str(option.get('label', '')).lower() == search_term:
+                selected_unit_id = option.get('id')
+                selected_unit_label = option.get('label')
+                break
+        
+        if selected_unit_id is None:
+            print(f"\nError: Invalid business unit '{args.unit}' specified.", file=sys.stderr)
+            print("Available options are:", file=sys.stderr)
+            for opt in unit_options:
+                print(f"  ID: {opt.get('id')}  -  '{opt.get('label')}'", file=sys.stderr)
+            sys.exit(1)
+    else:
+        if unit_options:
+            if len(unit_options) == 1:
+                # Select automatically with no prompt if only one option exists
+                selected_unit_id = unit_options[0].get('id')
+                selected_unit_label = unit_options[0].get('label')
+                print(f" -> Automatically selected single available Business Unit: {selected_unit_label} (ID: {selected_unit_id})")
+            else:
+                print("\nAvailable Business Units:")
+                for index, option in enumerate(unit_options, 1):
+                    print(f"  [{index}] {option.get('label')} (ID: {option.get('id')})")
+                
+                while True:
+                    try:
+                        selection = input(f"Select a business unit [1-{len(unit_options)}]: ").strip()
+                        if not selection:
+                            print("Selection cannot be empty. Please enter a number.")
+                            continue
+                        idx = int(selection) - 1
+                        if 0 <= idx < len(unit_options):
+                            selected_option = unit_options[idx]
+                            selected_unit_id = selected_option.get('id')
+                            selected_unit_label = selected_option.get('label')
+                            break
+                        else:
+                            print(f"Number out of range. Please enter a number between 1 and {len(unit_options)}.")
+                    except ValueError:
+                        print("Invalid input. Please enter a valid number.")
+                    except (KeyboardInterrupt, EOFError):
+                        print("\nOperation cancelled by user.")
+                        sys.exit(0)
+        else:
+            print("\nWarning: No business unit options found in server response.")
+
+    if selected_unit_label:
+        print(f" -> Selected Business Unit: {selected_unit_label} (ID: {selected_unit_id})")
+
     # Extract Meeting Type Options from the response
     options = extract_type_options(res)
     selected_type_id = None
@@ -290,8 +362,8 @@ def main():
 
     print(f" -> Selected Meeting Type: {selected_type_label} (ID: {selected_type_id})")
 
-    # 2. Second Request: Save Form Data (Set Meeting Type)
-    print("\n[2/3] Initializing meeting type on server...")
+    # 2. Second Request: Save Form Data (Set Meeting Type and Business Unit)
+    print("\n[2/3] Initializing meeting configuration on server...")
     set_type_url = f"{host}/meetings/{meeting_id}/save-form-data"
     type_data = {
         "typeId": selected_type_id,
@@ -299,8 +371,13 @@ def main():
             {"id": selected_type_id, "label": selected_type_label}
         ]
     }
+    if selected_unit_id is not None:
+        type_data["unitId"] = selected_unit_id
+        type_data["unitId__listItems"] = [
+            {"id": selected_unit_id, "label": selected_unit_label}
+        ]
     make_request(set_type_url, data_dict=type_data)
-    print(" -> Success! Meeting type initialized.")
+    print(" -> Success! Meeting type and business unit initialized.")
 
     # Determine meeting subject
     subject_label = get_control_label(res, "subject", "Subject")
