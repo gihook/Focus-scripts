@@ -1,0 +1,4 @@
+{
+  "HOST": "https://chub-dev.rationaletech.com",
+  "COOKIE": "ai_user=...; .AspNetCore.Antiforgery.xR-qFIVXoIw=...; auth_cookie=...; XSRF-TOKEN=..."
+}

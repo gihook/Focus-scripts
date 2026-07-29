@@ -1,0 +1,48 @@
+{
+  "decisionType": 0,
+  "subtype": "General",
+  "urgency": 0,
+  "title": "Sample subject",
+  "name": "Test name",
+  "employment_id": "Test employment ID",
+  "date_of_appointment": "2026-07-21T10:00:00Z",
+  "nationality": "a212306b-bc7e-4078-ab5f-8cb5e22558f6",
+  "nationality__listItems": [
+    {
+      "id": "a212306b-bc7e-4078-ab5f-8cb5e22558f6",
+      "label": "American Samoan",
+      "description": "American Samoan"
+    }
+  ],
+  "academic_qualification": "Test Q",
+  "total_number_of_years_of_experience": 1,
+  "performance_rating": "1",
+  "job_title": "Test previous job title",
+  "proposed_name": "Test new job title",
+  "current_grade": "867e96ad-1b01-46ef-bae8-19384cd6b550",
+  "current_grade__listItems": [
+    {
+      "id": "867e96ad-1b01-46ef-bae8-19384cd6b550",
+      "label": "1A",
+      "description": "1A"
+    }
+  ],
+  "proposed_grade": "cf4e849d-d8f7-40a9-9661-432df3a379e0",
+  "proposed_grade__listItems": [
+    {
+      "id": "cf4e849d-d8f7-40a9-9661-432df3a379e0",
+      "label": "1C",
+      "description": "1C"
+    }
+  ],
+  "division_from": "Test from division",
+  "division_to": "Test to division",
+  "sector_office_from": "Test from sector",
+  "unitId__listItems": [
+    {
+      "id": "0c547982-f21a-4be1-b3c0-fda8f4478c1a",
+      "label": "DGE"
+    }
+  ],
+  "sector_office_to": "Test to sector"
+}
