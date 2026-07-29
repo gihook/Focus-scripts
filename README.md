@@ -121,6 +121,7 @@ Handles creating meetings, dynamically parsing meeting types from the server, in
 | `-q` | `--quorum <text>` | Directly specifies the meeting quorum, skipping the quorum prompt. |
 | `-u` | `--user <username>` | Directly specifies which username to select from configuration (skips user prompt). |
 | `-a` | `--add-items <items>`| Comma-separated list of Submission UUIDs, Display IDs, or indices to add automatically (skips prompt). |
+| `-p` | `--publish` | Automatically publishes the meeting on the server, bypassing the publication prompt. |
 
 ---
 
@@ -130,7 +131,7 @@ Handles creating meetings, dynamically parsing meeting types from the server, in
 ```bash
 ./create-meeting.py
 ```
-This guides you through user selection, confirming credentials, choosing meeting types, and entering meeting details.
+This guides you through user selection, confirming credentials, choosing meeting types, entering meeting details, adding agenda items, and publishing the meeting.
 
 ### B. Fully Automated Execution (No Prompts)
 Perfect for automation, scripts, or CI/CD pipelines. This runs instantly without prompting for any user input:
@@ -138,6 +139,6 @@ Perfect for automation, scripts, or CI/CD pipelines. This runs instantly without
 # Automated Submission creation with specific user
 ./create-submission.py -u SystemAdmin -y -t "My Automated Submission" -s 101
 
-# Automated Meeting creation with specific user
-./create-meeting.py -u NormalUser -y -s 101 -t "Sync Meeting" -q "3"
+# Automated Meeting creation with specific user, automatic agenda items, and publication
+./create-meeting.py -u NormalUser -y -s 101 -t "Sync Meeting" -q "3" -a "1,2" --publish
 ```

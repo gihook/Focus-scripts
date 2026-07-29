@@ -108,6 +108,11 @@ def parse_arguments():
         type=str,
         help="Comma-separated list of Submission UUIDs, Display IDs, or indices to add automatically (skips prompt)"
     )
+    parser.add_argument(
+        '-p', '--publish',
+        action='store_true',
+        help="Automatically publish the meeting (skips publish prompt)"
+    )
     return parser.parse_args()
 
 def extract_type_options(create_response):
@@ -483,6 +488,25 @@ def main():
             print(" -> No submissions selected/added.")
     else:
         print(" -> No available submissions found to add to this meeting.")
+
+    # 5. Prompt to publish meeting
+    should_publish = False
+    if args.publish:
+        should_publish = True
+    else:
+        try:
+            confirm_publish = input("\nDo you want to publish this meeting? [y/N]: ").strip().lower()
+            should_publish = confirm_publish in ('y', 'yes')
+        except (KeyboardInterrupt, EOFError):
+            pass
+
+    if should_publish:
+        print(" -> Publishing meeting on server...")
+        publish_url = f"{host}/Meetings/{meeting_id}/execute-workflow-action/PUBLISH"
+        make_request(publish_url, data_dict={})
+        print(" -> Success! Meeting published.")
+    else:
+        print(" -> Meeting publication skipped (retains Draft status).")
 
     # Complete Message
     print("\nMeeting is created.")
