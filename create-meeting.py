@@ -8,6 +8,21 @@ import urllib.error
 
 CONFIG_FILE = ".config.json"
 
+class SameHostRedirectHandler(urllib.request.HTTPRedirectHandler):
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        new_req = super().redirect_request(req, fp, code, msg, headers, newurl)
+        if new_req:
+            # Copy all custom headers from original request to prevent Cookie dropping on redirect
+            for key, val in req.headers.items():
+                new_req.add_header(key, val)
+            for key, val in req.unredirected_hdrs.items():
+                new_req.add_header(key, val)
+        return new_req
+
+# Install redirect handler globally to retain Cookie and sensitive headers on redirects
+opener = urllib.request.build_opener(SameHostRedirectHandler)
+urllib.request.install_opener(opener)
+
 def load_config():
     if not os.path.exists(CONFIG_FILE):
         print(f"Error: Configuration file '{CONFIG_FILE}' is missing.", file=sys.stderr)
@@ -510,7 +525,7 @@ def main():
 
     if should_publish:
         print(" -> Publishing meeting on server...")
-        publish_url = f"{host}/Meetings/{meeting_id}/execute-workflow-action/PUBLISH"
+        publish_url = f"{host}/meetings/{meeting_id}/execute-workflow-action/PUBLISH"
         make_request(publish_url, data_dict={})
         print(" -> Success! Meeting published.")
     else:
