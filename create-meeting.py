@@ -103,6 +103,11 @@ def parse_arguments():
         type=str,
         help="Specify the USERNAME to use from the configuration (skips the user selection prompt)"
     )
+    parser.add_argument(
+        '-a', '--add-items',
+        type=str,
+        help="Comma-separated list of Submission UUIDs, Display IDs, or indices to add automatically (skips prompt)"
+    )
     return parser.parse_args()
 
 def extract_type_options(create_response):
@@ -173,9 +178,12 @@ def main():
         'sec-ch-ua-platform': '"Linux"'
     }
 
-    def make_request(url, data_dict=None):
-        payload = json.dumps(data_dict).encode('utf-8') if data_dict is not None else b'{}'
-        req = urllib.request.Request(url, data=payload, headers=headers, method='POST')
+    def make_request(url, data_dict=None, method='POST'):
+        if method == 'GET':
+            req = urllib.request.Request(url, headers=headers, method='GET')
+        else:
+            payload = json.dumps(data_dict).encode('utf-8') if data_dict is not None else b'{}'
+            req = urllib.request.Request(url, data=payload, headers=headers, method=method)
         try:
             with urllib.request.urlopen(req) as response:
                 return json.loads(response.read().decode('utf-8'))
@@ -372,6 +380,109 @@ def main():
     save_url = f"{host}/meetings/{meeting_id}/save-form-data"
     make_request(save_url, data_dict=meeting_data)
     print(" -> Success! Meeting details saved.")
+
+    # 4. Prompt to add submission to meeting
+    print("\nChecking for available submissions to add to this meeting...")
+    available_items_url = f"{host}/meetings/{meeting_id}/available-agenda-items?pageNumber=1&pageSize=10"
+    res_items = make_request(available_items_url, method='GET')
+    
+    # Robustly extract list of items
+    items = []
+    if isinstance(res_items, list):
+        items = res_items
+    elif isinstance(res_items, dict):
+        items = res_items.get('items', res_items.get('results', res_items.get('data', [])))
+        if not items:
+            # Fallback check
+            for val in res_items.values():
+                if isinstance(val, list) and all(isinstance(x, dict) for x in val):
+                    items = val
+                    break
+                    
+    if items:
+        selected_uuids = []
+        if args.add_items is not None:
+            # Handle automatic selection from flags
+            search_terms = [t.strip().lower() for t in args.add_items.replace(',', ' ').split()]
+            for term in search_terms:
+                matched = False
+                # Try matching by index (1-based)
+                try:
+                    idx = int(term) - 1
+                    if 0 <= idx < len(items):
+                        selected_uuids.append(items[idx].get('id'))
+                        matched = True
+                except ValueError:
+                    pass
+                
+                if not matched:
+                    # Try matching by displayId or exact UUID
+                    for item in items:
+                        if str(item.get('displayId')).lower() == term or str(item.get('id')).lower() == term:
+                            selected_uuids.append(item.get('id'))
+                            matched = True
+                            break
+            
+            # Clean none/null and duplicate values
+            selected_uuids = list(set([uid for uid in selected_uuids if uid]))
+        else:
+            # Interactive selection
+            print("\nAvailable Submissions:")
+            for index, item in enumerate(items, 1):
+                display_id = item.get('displayId', 'N/A')
+                subject = item.get('subject', item.get('title', 'No Subject'))
+                type_name = item.get('typeName', item.get('submissionType', {}).get('label', 'N/A'))
+                print(f"  [{index}] ID: {display_id} - {subject} ({type_name})")
+            
+            try:
+                selection = input("\nEnter the numbers of the submissions you want to add (e.g. 1, 3) or press Enter to skip: ").strip()
+                if selection:
+                    # Use robust list selection parser
+                    selected_indices = []
+                    parts = selection.replace(',', ' ').split()
+                    for part in parts:
+                        if '-' in part:
+                            try:
+                                start, end = part.split('-', 1)
+                                s_idx = int(start) - 1
+                                e_idx = int(end) - 1
+                                for i in range(s_idx, e_idx + 1):
+                                    if 0 <= i < len(items):
+                                        selected_indices.append(i)
+                            except ValueError:
+                                pass
+                        else:
+                            try:
+                                val = int(part) - 1
+                                if 0 <= val < len(items):
+                                    selected_indices.append(val)
+                            except ValueError:
+                                pass
+                    
+                    # De-duplicate indices preserving order
+                    seen = set()
+                    unique_indices = [x for x in selected_indices if not (x in seen or seen.add(x))]
+                    
+                    for idx in unique_indices:
+                        selected_uuids.append(items[idx].get('id'))
+            except (KeyboardInterrupt, EOFError):
+                print("\nSubmissions addition skipped.")
+        
+        # If we have selected any UUIDs, post them to add-existing-items
+        if selected_uuids:
+            print(f" -> Adding {len(selected_uuids)} submission(s) to the meeting agenda...")
+            add_url = f"{host}/meetings/{meeting_id}/add-existing-items"
+            add_data = {
+                "aggregateId": meeting_id,
+                "placeholderName": "Meeting Agenda",
+                "submissionIds": selected_uuids
+            }
+            make_request(add_url, data_dict=add_data)
+            print(" -> Success! Submissions added to meeting agenda.")
+        else:
+            print(" -> No submissions selected/added.")
+    else:
+        print(" -> No available submissions found to add to this meeting.")
 
     # Complete Message
     print("\nMeeting is created.")

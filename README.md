@@ -95,12 +95,18 @@ Handles creating submissions, dynamically parsing available submission types fro
 
 ## 2. Meeting Creator (`create-meeting.py`)
 
-Handles creating meetings, dynamically parsing meeting types from the server, initializing the meeting, and saving meeting details (Subject and Quorum).
+Handles creating meetings, dynamically parsing meeting types from the server, initializing the meeting, saving meeting details (Subject and Quorum), and adding available submissions to the meeting agenda.
 
 ### Custom Payloads (`meeting-payloads/`)
 * Put your custom JSON payload as `<typeId>.json` (e.g. `101.json` for *Internal*).
 * If matching file is missing, the script attempts to load `meeting-payloads/default.json`. If that is also missing, it falls back to `{}`.
-* The script then dynamically prompts for **Subject** and **Quorum** based on the server's formControls response metadata labels and injects them into the payload.
+* The script dynamically prompts for **Subject** and **Quorum** based on the server's formControls response metadata labels and injects them into the payload.
+
+### Dynamic Submission Agenda Addition
+* After saving meeting details, the script automatically fetches available submissions (agenda items) from the server.
+* It prints them clearly showing their ID (`displayId`), `subject`, and `typeName`.
+* In interactive mode, it prompts you to select multiple items to add to the meeting's agenda.
+* It handles list indexing, commas, spaces, and range selections (e.g. `1,3`, `1 3`, `1-2`).
 
 ### CLI Usage & Flags
 ```bash
@@ -114,6 +120,7 @@ Handles creating meetings, dynamically parsing meeting types from the server, in
 | `-t` | `--subject <text>`| Directly specifies the meeting subject, skipping the subject prompt. |
 | `-q` | `--quorum <text>` | Directly specifies the meeting quorum, skipping the quorum prompt. |
 | `-u` | `--user <username>` | Directly specifies which username to select from configuration (skips user prompt). |
+| `-a` | `--add-items <items>`| Comma-separated list of Submission UUIDs, Display IDs, or indices to add automatically (skips prompt). |
 
 ---
 
