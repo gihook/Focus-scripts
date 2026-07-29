@@ -30,14 +30,43 @@ Copy `.config.example.json` into `.config.json`:
 cp .config.example.json .config.json
 ```
 
-### 2. Configure Credentials
-Edit the hidden `.config.json` with your target `HOST` and authorization `COOKIE`:
+### 2. Configure Credentials (Multi-User Support)
+Edit the hidden `.config.json` with your target `HOST` and an array of configured `USERS`:
 ```json
 {
   "HOST": "https://chub-dev.rationaletech.com",
-  "COOKIE": "ai_user=...; .AspNetCore.Antiforgery.xR-qFIVXoIw=...; auth_cookie=...; XSRF-TOKEN=..."
+  "USERS": [
+    {
+      "USERNAME": "SystemAdmin",
+      "COOKIE": "ai_user=...; .AspNetCore.Antiforgery.xR-qFIVXoIw=...; auth_cookie=...; XSRF-TOKEN=..."
+    },
+    {
+      "USERNAME": "NormalUser",
+      "COOKIE": "ai_user=...; .AspNetCore.Antiforgery.xR-qFIVXoIw=...; auth_cookie=...; XSRF-TOKEN=..."
+    }
+  ]
 }
 ```
+
+*Note: Backward-compatibility is supported. If your config only has a root-level `"COOKIE"`, the script will automatically treat it as a single user named `"Default"` without prompting you.*
+
+---
+
+## Multi-User Selection Flow
+
+1. **Interactive Prompt:** If multiple users are configured in `USERS`, running any script will prompt you to select the active user:
+   ```
+   Available Users:
+     [1] SystemAdmin
+     [2] NormalUser
+   Select a user [1-2]: 
+   ```
+   *(If only one user is configured, the script automatically skips this prompt).*
+
+2. **Command Line Flag Pre-selection (`-u` / `--user`):** Bypass the selection prompt entirely by pre-selecting the user by name:
+   ```bash
+   ./create-submission.py -u SystemAdmin
+   ```
 
 ---
 
@@ -60,6 +89,7 @@ Handles creating submissions, dynamically parsing available submission types fro
 | `-y` | `--yes` | Bypasses the target host and authorization cookie confirmation prompt. |
 | `-t` | `--title <title>` | Directly specifies the submission title, skipping the title prompt. |
 | `-s` | `--type <type>` | Directly specifies the type ID or Label, skipping the type prompt. |
+| `-u` | `--user <username>` | Directly specifies which username to select from configuration (skips user prompt). |
 
 ---
 
@@ -83,6 +113,7 @@ Handles creating meetings, dynamically parsing meeting types from the server, in
 | `-s` | `--type <type>` | Directly specifies the meeting type ID or Label, skipping the type prompt. |
 | `-t` | `--subject <text>`| Directly specifies the meeting subject, skipping the subject prompt. |
 | `-q` | `--quorum <text>` | Directly specifies the meeting quorum, skipping the quorum prompt. |
+| `-u` | `--user <username>` | Directly specifies which username to select from configuration (skips user prompt). |
 
 ---
 
@@ -92,14 +123,14 @@ Handles creating meetings, dynamically parsing meeting types from the server, in
 ```bash
 ./create-meeting.py
 ```
-This guides you through confirming your credentials, selecting a meeting type from the server-returned choices, and prompting you for your custom subject and quorum.
+This guides you through user selection, confirming credentials, choosing meeting types, and entering meeting details.
 
 ### B. Fully Automated Execution (No Prompts)
 Perfect for automation, scripts, or CI/CD pipelines. This runs instantly without prompting for any user input:
 ```bash
-# Automated Submission creation
-./create-submission.py -y -t "My Automated Submission" -s 101
+# Automated Submission creation with specific user
+./create-submission.py -u SystemAdmin -y -t "My Automated Submission" -s 101
 
-# Automated Meeting creation
-./create-meeting.py -y -s 101 -t "Sync Meeting" -q "3"
+# Automated Meeting creation with specific user
+./create-meeting.py -u NormalUser -y -s 101 -t "Sync Meeting" -q "3"
 ```

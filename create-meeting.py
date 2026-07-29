@@ -22,13 +22,59 @@ def load_config():
         sys.exit(1)
         
     host = config.get("HOST")
-    cookie = config.get("COOKIE")
-    
-    if not host or not cookie:
-        print(f"Error: Both 'HOST' and 'COOKIE' must be set in '{CONFIG_FILE}'.", file=sys.stderr)
+    if not host:
+        print(f"Error: 'HOST' must be set in '{CONFIG_FILE}'.", file=sys.stderr)
         sys.exit(1)
         
-    return host, cookie
+    users = config.get("USERS", [])
+    if not users:
+        cookie = config.get("COOKIE")
+        if cookie:
+            users = [{"USERNAME": "Default", "COOKIE": cookie}]
+            
+    if not users:
+        print(f"Error: No valid cookies or users found in '{CONFIG_FILE}'. Please set 'COOKIE' or 'USERS'.", file=sys.stderr)
+        sys.exit(1)
+        
+    return host, users
+
+def select_user(users, preselected_username=None):
+    if preselected_username is not None:
+        search_term = preselected_username.strip().lower()
+        for u in users:
+            if u.get("USERNAME", "").lower() == search_term:
+                return u.get("USERNAME"), u.get("COOKIE")
+        print(f"Error: User '{preselected_username}' not found in configuration.", file=sys.stderr)
+        print("Available users are:", file=sys.stderr)
+        for u in users:
+            print(f"  - {u.get('USERNAME')}", file=sys.stderr)
+        sys.exit(1)
+        
+    # If there is only one user in the config, skip prompt and return it directly
+    if len(users) == 1:
+        return users[0].get("USERNAME"), users[0].get("COOKIE")
+        
+    print("Available Users:")
+    for index, u in enumerate(users, 1):
+        print(f"  [{index}] {u.get('USERNAME')}")
+        
+    while True:
+        try:
+            selection = input(f"Select a user [1-{len(users)}]: ").strip()
+            if not selection:
+                print("Selection cannot be empty. Please enter a number.")
+                continue
+            idx = int(selection) - 1
+            if 0 <= idx < len(users):
+                selected_user = users[idx]
+                return selected_user.get("USERNAME"), selected_user.get("COOKIE")
+            else:
+                print(f"Number out of range. Please enter a number between 1 and {len(users)}.")
+        except ValueError:
+            print("Invalid input. Please enter a valid number.")
+        except (KeyboardInterrupt, EOFError):
+            print("\nAborted.")
+            sys.exit(0)
 
 def parse_arguments():
     parser = argparse.ArgumentParser(description="Create a meeting on Rationaletech CHub.")
@@ -51,6 +97,11 @@ def parse_arguments():
         '-q', '--quorum',
         type=str,
         help="Specify the meeting quorum ID or Label directly (skips the quorum prompt)"
+    )
+    parser.add_argument(
+        '-u', '--user',
+        type=str,
+        help="Specify the USERNAME to use from the configuration (skips the user selection prompt)"
     )
     return parser.parse_args()
 
@@ -87,8 +138,12 @@ def get_control_label(create_response, control_key, default_label):
 def main():
     args = parse_arguments()
     
-    # Load host and cookie from the hidden config file
-    host, cookie = load_config()
+    # Load configuration details
+    host, users = load_config()
+
+    # Select the active user credentials
+    username, cookie = select_user(users, args.user)
+    print(f"-> Active User: {username}")
 
     # Show configuration and prompt for confirmation if not skipped via -y/--yes
     print("Configuration details:")
