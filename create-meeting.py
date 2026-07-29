@@ -40,7 +40,7 @@ def parse_arguments():
     parser.add_argument(
         '-s', '--type',
         type=str,
-        help="Specify the meeting type ID or Label directly (skips the type selection prompt)"
+        help="Specify the meeting type ID or Label directly (skips the type prompt)"
     )
     parser.add_argument(
         '-t', '--subject',
@@ -50,7 +50,7 @@ def parse_arguments():
     parser.add_argument(
         '-q', '--quorum',
         type=str,
-        help="Specify the meeting quorum directly (skips the quorum prompt)"
+        help="Specify the meeting quorum ID or Label directly (skips the quorum prompt)"
     )
     return parser.parse_args()
 
@@ -60,6 +60,16 @@ def extract_type_options(create_response):
         controls = section.get("formControls", [])
         for ctrl in controls:
             if ctrl.get("key") == "typeId":
+                props = ctrl.get("props", {})
+                return props.get("options", [])
+    return []
+
+def extract_quorum_options(create_response):
+    form_sections = create_response.get("formSections", [])
+    for section in form_sections:
+        controls = section.get("formControls", [])
+        for ctrl in controls:
+            if ctrl.get("key") == "quorum":
                 props = ctrl.get("props", {})
                 return props.get("options", [])
     return []
@@ -214,14 +224,57 @@ def main():
 
     # Determine meeting quorum
     quorum_label = get_control_label(res, "quorum", "Quorum")
+    quorum_options = extract_quorum_options(res)
+    
+    selected_quorum_id = None
+    selected_quorum_label = None
+
     if args.quorum is not None:
-        meeting_quorum = args.quorum.strip()
+        search_term = args.quorum.strip().lower()
+        for option in quorum_options:
+            if str(option.get('id')) == search_term or str(option.get('label', '')).lower() == search_term:
+                selected_quorum_id = option.get('id')
+                selected_quorum_label = option.get('label')
+                break
+        
+        # If not matched, treat argument as direct raw value
+        if selected_quorum_id is None:
+            selected_quorum_id = args.quorum.strip()
+            selected_quorum_label = args.quorum.strip()
     else:
-        try:
-            meeting_quorum = input(f"Enter {quorum_label.lower()} for this meeting: ").strip()
-        except (KeyboardInterrupt, EOFError):
-            print("\nOperation cancelled by user.")
-            sys.exit(0)
+        if quorum_options:
+            print(f"\nAvailable {quorum_label} Options:")
+            for index, option in enumerate(quorum_options, 1):
+                print(f"  [{index}] {option.get('label')} (ID: {option.get('id')})")
+            
+            while True:
+                try:
+                    selection = input(f"Select quorum [1-{len(quorum_options)}]: ").strip()
+                    if not selection:
+                        print("Selection cannot be empty. Please enter a number.")
+                        continue
+                    idx = int(selection) - 1
+                    if 0 <= idx < len(quorum_options):
+                        selected_option = quorum_options[idx]
+                        selected_quorum_id = selected_option.get('id')
+                        selected_quorum_label = selected_option.get('label')
+                        break
+                    else:
+                        print(f"Number out of range. Please enter a number between 1 and {len(quorum_options)}.")
+                except ValueError:
+                    print("Invalid input. Please enter a valid number.")
+                except (KeyboardInterrupt, EOFError):
+                    print("\nOperation cancelled by user.")
+                    sys.exit(0)
+        else:
+            try:
+                selected_quorum_id = input(f"\nEnter {quorum_label.lower()} for this meeting: ").strip()
+                selected_quorum_label = selected_quorum_id
+            except (KeyboardInterrupt, EOFError):
+                print("\nOperation cancelled by user.")
+                sys.exit(0)
+
+    print(f" -> Selected Quorum: {selected_quorum_label} (ID: {selected_quorum_id})")
 
     # 3. Third Request: Save custom meeting payload
     payload_file = os.path.join("meeting-payloads", f"{selected_type_id}.json")
@@ -255,7 +308,10 @@ def main():
 
     # Set subject and quorum
     meeting_data['subject'] = meeting_subject
-    meeting_data['quorum'] = meeting_quorum
+    meeting_data['quorum'] = selected_quorum_id
+    meeting_data['quorum__listItems'] = [
+        {"id": selected_quorum_id, "label": selected_quorum_label}
+    ]
 
     print(" -> Submitting updated meeting form data payload...")
     save_url = f"{host}/meetings/{meeting_id}/save-form-data"
