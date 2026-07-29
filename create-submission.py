@@ -198,17 +198,26 @@ def main():
             sys.exit(0)
 
     # 3. Third Request: Save custom form data
-    print(f"\n[3/3] Reading save-submission-data.json and applying title '{submission_title}'...")
-    try:
-        with open('save-submission-data.json', 'r') as f:
-            submission_data = json.load(f)
-    except FileNotFoundError:
-        print("\nError: save-submission-data.json not found.", file=sys.stderr)
-        sys.exit(1)
-    except json.JSONDecodeError as e:
-        print(f"\nError: Failed to parse save-submission-data.json: {e}", file=sys.stderr)
-        sys.exit(1)
+    payload_file = os.path.join("submission-payloads", f"{selected_type_id}.json")
+    print(f"\n[3/3] Preparing form data payload (Type ID: {selected_type_id})...")
+    
+    if os.path.exists(payload_file):
+        print(f" -> Found specific payload file: '{payload_file}'")
+        try:
+            with open(payload_file, 'r') as f:
+                submission_data = json.load(f)
+            print(f" -> Successfully loaded payload from '{payload_file}'")
+        except json.JSONDecodeError as e:
+            print(f"\nError: Failed to parse JSON from payload file '{payload_file}': {e}", file=sys.stderr)
+            sys.exit(1)
+        except Exception as e:
+            print(f"\nError reading payload file '{payload_file}': {e}", file=sys.stderr)
+            sys.exit(1)
+    else:
+        print(f" -> No payload file found at '{payload_file}'. Falling back to simple payload with title only.")
+        submission_data = {}
 
+    # Override/set the title
     submission_data['title'] = submission_title
 
     print(" -> Submitting updated form data payload...")
