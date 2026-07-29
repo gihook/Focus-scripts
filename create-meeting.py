@@ -76,6 +76,14 @@ def select_user(users, preselected_username=None):
             print("\nAborted.")
             sys.exit(0)
 
+def extract_xsrf_token(cookie_str):
+    parts = cookie_str.split(';')
+    for part in parts:
+        part = part.strip()
+        if part.startswith('XSRF-TOKEN='):
+            return part[len('XSRF-TOKEN='):]
+    return 'CfDJ8B3cU1ZsNd1MirISpSbNJd9xEGENsXFsuDl7V5fCVCB8-pA-dO7yChyFNS8TfS_q_-Gz5K5WJeKA4q_0zrp2HZ0xaXWgMy2fIYPUWiVK851Gk2rDAn-zV9tVPYhlouwMrtmtQPeeP9L-8KxFeDtsLPVuevjpLwWrJjvto0piDPQUVGlit2-AOQK2ByM-LOAYHQ'
+
 def parse_arguments():
     parser = argparse.ArgumentParser(description="Create a meeting on Rationaletech CHub.")
     parser.add_argument(
@@ -176,7 +184,7 @@ def main():
         'Accept': 'application/json, text/plain, */*',
         'Content-Type': 'application/json',
         'Cookie': cookie,
-        'X-XSRF-TOKEN': 'CfDJ8B3cU1ZsNd1MirISpSbNJd9xEGENsXFsuDl7V5fCVCB8-pA-dO7yChyFNS8TfS_q_-Gz5K5WJeKA4q_0zrp2HZ0xaXWgMy2fIYPUWiVK851Gk2rDAn-zV9tVPYhlouwMrtmtQPeeP9L-8KxFeDtsLPVuevjpLwWrJjvto0piDPQUVGlit2-AOQK2ByM-LOAYHQ',
+        'X-XSRF-TOKEN': extract_xsrf_token(cookie),
         'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36',
         'sec-ch-ua': '"Not;A=Brand";v="8", "Chromium";v="150", "Brave";v="150"',
         'sec-ch-ua-mobile': '?0',
