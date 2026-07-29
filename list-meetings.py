@@ -3,11 +3,11 @@ import argparse
 import json
 import os
 import sys
-import time
 import urllib.request
 import urllib.parse
 import http.cookiejar
 import re
+import time
 
 CONFIG_FILE = ".config.json"
 
@@ -102,13 +102,13 @@ def extract_xsrf_token(cookie_str):
             return part[len('XSRF-TOKEN='):]
     return 'CfDJ8B3cU1ZsNd1MirISpSbNJd9xEGENsXFsuDl7V5fCVCB8-pA-dO7yChyFNS8TfS_q_-Gz5K5WJeKA4q_0zrp2HZ0xaXWgMy2fIYPUWiVK851Gk2rDAn-zV9tVPYhlouwMrtmtQPeeP9L-8KxFeDtsLPVuevjpLwWrJjvto0piDPQUVGlit2-AOQK2ByM-LOAYHQ'
 
-def print_details_card(details, label="SUBMISSION DETAILS"):
+def print_details_card(details, label="MEETING DETAILS"):
     print("\n" + "="*50)
-    print(f"{label} (Display ID: {details.get('displayId', 'N/A')})")
+    print(f"{label} (Display ID: {details.get('displayId', details.get('meetingNo', 'N/A'))})")
     print("="*50)
     print(f"UUID:            {details.get('id', 'N/A')}")
-    title_val = details.get('title', details.get('subject', 'No Title'))
-    print(f"Title/Subject:   {title_val}")
+    title_val = details.get('subject', details.get('title', 'No Subject'))
+    print(f"Subject:         {title_val}")
     print(f"Status:          {details.get('status', 'N/A')}")
     print(f"Created:         {details.get('creationTimestamp', 'N/A')}")
     
@@ -126,7 +126,7 @@ def print_details_card(details, label="SUBMISSION DETAILS"):
                 print(f"  - Step #{idx}: Status={s_status} (Type={s_type})")
 
 def parse_arguments():
-    parser = argparse.ArgumentParser(description="Search and view submissions on Rationaletech CHub.")
+    parser = argparse.ArgumentParser(description="Search and view meetings on Rationaletech CHub.")
     parser.add_argument(
         '-u', '--user',
         type=str,
@@ -141,7 +141,7 @@ def parse_arguments():
     parser.add_argument(
         '-q', '--query',
         type=str,
-        help="Initial search term/filter for submissions"
+        help="Initial search term/filter for meetings"
     )
     return parser.parse_args()
 
@@ -204,9 +204,9 @@ def main():
     
     while True:
         term_desc = f" matching '{search_term}'" if search_term else ""
-        print(f"Fetching submissions page {page}{term_desc} from server...")
+        print(f"Fetching meetings page {page}{term_desc} from server...")
         
-        search_url = f"{host}/submissions/search?pageNumber={page}&pageSize=10"
+        search_url = f"{host}/meetings/search?pageNumber={page}&pageSize=10"
         if search_term:
             search_url += f"&searchTerm={urllib.parse.quote(search_term)}"
             
@@ -226,27 +226,26 @@ def main():
                         break
 
         if not items:
-            print(f"\nNo submissions found on Page {page}{term_desc}.")
+            print(f"\nNo meetings found on Page {page}{term_desc}.")
             if page > 1:
                 print("Returning to previous page...")
                 page -= 1
                 time.sleep(1)
                 continue
             else:
-                # If they filter and get no results on page 1, let them clear or change filter
                 if search_term:
                     print("\nYou can clear the search filter using 'c' or enter a new one.")
                 else:
                     print("Exiting.")
                     sys.exit(0)
 
-        # Display submissions table
-        print(f"\n--- Submissions (Page {page}){term_desc} ---")
+        # Display meetings table
+        print(f"\n--- Meetings (Page {page}){term_desc} ---")
         for index, item in enumerate(items, 1):
-            display_id = item.get('displayId', 'N/A')
-            title = item.get('title', item.get('subject', 'No Title'))
+            display_id = item.get('displayId', item.get('meetingNo', 'N/A'))
+            subject = item.get('subject', item.get('title', 'No Subject'))
             status = item.get('status', 'N/A')
-            print(f"  [{index}] ID: {display_id:<8} - {title:<45} (Status: {status})")
+            print(f"  [{index}] ID: {display_id:<8} - {subject:<45} (Status: {status})")
 
         print("\nNavigation / Filter Options:")
         options_text = []
@@ -276,21 +275,21 @@ def main():
             idx = int(choice_lower) - 1
             if 0 <= idx < len(items):
                 selected_item = items[idx]
-                submission_uuid = selected_item.get('id')
-                if not submission_uuid:
-                    print("Error: Could not retrieve submission UUID.")
+                meeting_uuid = selected_item.get('id')
+                if not meeting_uuid:
+                    print("Error: Could not retrieve meeting UUID.")
                     time.sleep(1.5)
                     continue
                 
                 # Fetch full details
-                print(f"\nFetching full details for submission {selected_item.get('displayId', 'N/A')}...")
-                detail_url = f"{host}/submissions/{submission_uuid}"
+                print(f"\nFetching full details for meeting {selected_item.get('displayId', 'N/A')}...")
+                detail_url = f"{host}/meetings/{meeting_uuid}"
                 details = make_get_request(detail_url)
                 
                 # Print details cleanly
                 print_details_card(details)
                 
-                # Extract and list available actions
+                # Extract and list available actions inside subloop
                 while True:
                     actions = details.get('availableActions', [])
                     print("\nAvailable Actions:")
@@ -377,7 +376,7 @@ def main():
                                 time.sleep(1.5)
                                 
                                 # Refresh details from server
-                                print("\nRefreshing submission details...")
+                                print("\nRefreshing meeting details...")
                                 details = make_get_request(detail_url)
                                 
                                 # Print refreshed details cleanly

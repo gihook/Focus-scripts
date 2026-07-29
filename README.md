@@ -14,6 +14,7 @@ A clean, robust, zero-dependency suite of Python scripts to automate, create, in
 ├── login.py                   # Automated OIDC session login helper
 ├── list-users.py              # Paginated user browser & terminal-auth helper
 ├── list-submissions.py        # Paginated submission browser & search filter
+├── list-meetings.py           # Paginated meeting browser & search filter
 ├── create-submission.py       # Submission creation helper
 ├── create-meeting.py          # Meeting creation helper
 ├── submission-payloads/       # Custom payloads folder for Submissions
@@ -74,7 +75,25 @@ Alternatively, initiate with a pre-selected user and filter directly from comman
 ./list-submissions.py -u SystemAdmin -q "internal"
 ```
 
-### 5. Configure Credentials Manually (Optional)
+### 5. Search, Browse, and Execute Meeting Actions (`list-meetings.py`)
+To dynamically search, browse, view details, and execute actions on meetings inside the CHub workspace:
+* Run the meeting browser script:
+  ```bash
+  ./list-meetings.py
+  ```
+* Navigating & Action execution:
+  * Enter `n` to go to the next page, or `p` for the previous page.
+  * Enter `f <searchTerm>` to filter meetings by keyword (e.g. `f committee` or `f draft`).
+  * Enter `c` to clear filters.
+  * Type any `<number>` matching a meeting to pull up its full details card.
+  * Inside the detail card, select any of the listed `availableActions` (by index number) to fill its parameters (supports interactive inputs) and execute it on the spot!
+
+Alternatively, initiate with a pre-selected user and filter directly from arguments:
+```bash
+./list-meetings.py -u SystemAdmin -q "committee"
+```
+
+### 6. Configure Credentials Manually (Optional)
 Edit the hidden `.config.json` with your target `HOST` and an array of configured `USERS`:
 ```json
 {
