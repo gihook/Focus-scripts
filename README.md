@@ -11,6 +11,7 @@ A clean, robust, zero-dependency suite of Python scripts to automate, create, in
 ├── .config.example.json       # Template for local config (tracked)
 ├── .gitignore                 # Extensively configures untracked files
 ├── README.md                  # This documentation
+├── login.py                   # Automated OIDC session login helper
 ├── create-submission.py       # Submission creation helper
 ├── create-meeting.py          # Meeting creation helper
 ├── submission-payloads/       # Custom payloads folder for Submissions
@@ -30,7 +31,21 @@ Copy `.config.example.json` into `.config.json`:
 cp .config.example.json .config.json
 ```
 
-### 2. Configure Credentials (Multi-User Support)
+### 2. Login & Retrieve Cookies Automatically (`login.py`)
+Instead of copying cookies manually from your browser, you can log in directly from your terminal using `login.py`!
+* Run the login helper:
+  ```bash
+  ./login.py
+  ```
+* Enter your email (e.g. `sysadmin` or another authorized email).
+* The script automatically completes OIDC authentication against the mock OAuth server, retrieves the target `auth_cookie`, `XSRF-TOKEN`, and Antiforgery session cookies, and populates them directly inside `.config.json` under your email.
+
+Alternatively, log in instantly without prompts by passing the email via flag:
+```bash
+./login.py -e sysadmin
+```
+
+### 3. Configure Credentials Manually (Optional)
 Edit the hidden `.config.json` with your target `HOST` and an array of configured `USERS`:
 ```json
 {
