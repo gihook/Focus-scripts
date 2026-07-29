@@ -13,6 +13,7 @@ A clean, robust, zero-dependency suite of Python scripts to automate, create, in
 ├── README.md                  # This documentation
 ├── login.py                   # Automated OIDC session login helper
 ├── list-users.py              # Paginated user browser & terminal-auth helper
+├── list-submissions.py        # Paginated submission browser & search filter
 ├── create-submission.py       # Submission creation helper
 ├── create-meeting.py          # Meeting creation helper
 ├── submission-payloads/       # Custom payloads folder for Submissions
@@ -57,7 +58,23 @@ To discover and log in as other system users (such as specific managers, testers
   * Enter `s <indices>` to automatically select one or multiple users to log in (e.g. `s 1, 3` or `s 2`).
   * The script dynamically requests mock OIDC tokens and cookies for the selected users, authenticates them on CHub, and registers/saves their active credentials inside `.config.json` instantly!
 
-### 4. Configure Credentials Manually (Optional)
+### 4. Search and Browse Submissions (`list-submissions.py`)
+To dynamically search, browse, and list submissions inside the CHub workspace:
+* Run the listing script (the script prompts you to choose which of your configured accounts should perform the query):
+  ```bash
+  ./list-submissions.py
+  ```
+* Navigating & Filtering results:
+  * Enter `n` to go to the next page, or `p` for the previous page.
+  * Enter `f <searchTerm>` to filter submissions by a keyword (e.g. `f promotion` or `f draft`).
+  * Enter `c` to clear the current search term/filter and reload all results.
+
+Alternatively, initiate with a pre-selected user and filter directly from command line arguments:
+```bash
+./list-submissions.py -u SystemAdmin -q "internal"
+```
+
+### 5. Configure Credentials Manually (Optional)
 Edit the hidden `.config.json` with your target `HOST` and an array of configured `USERS`:
 ```json
 {
