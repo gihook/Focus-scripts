@@ -125,6 +125,47 @@ def print_details_card(details, label="MEETING DETAILS"):
                 s_type = step.get('stepType', 'N/A')
                 print(f"  - Step #{idx}: Status={s_status} (Type={s_type})")
 
+    # Agenda Placeholders / Items information
+    placeholders = details.get('agendaPlaceholders', [])
+    if isinstance(placeholders, dict):
+        placeholders = list(placeholders.values())
+        
+    if isinstance(placeholders, list) and placeholders:
+        print("\nAgenda Placeholders & Submissions:")
+        has_items_anywhere = False
+        for ph in placeholders:
+            ph_name = ph.get('placeholderName', ph.get('name', 'Agenda Section'))
+            ph_items = ph.get('items', ph.get('agendaItems', ph.get('submissions', [])))
+            if ph_items:
+                has_items_anywhere = True
+                print(f"  * {ph_name}:")
+                for index, item in enumerate(ph_items, 1):
+                    disp_id = item.get('displayId', 'N/A')
+                    submission_id = item.get('submissionId', item.get('id'))
+                    title = item.get('title', item.get('subject', 'No Title'))
+                    status = item.get('status', 'N/A')
+                    print(f"    - [{index}] ID: {disp_id} - {title} (Status: {status})")
+                    
+                    # Extract and display voting options if present for this submissionId
+                    voting_options_dict = details.get('votingOptionsBySubmission', details.get('votingOptionsPerSubmission', {}))
+                    if voting_options_dict and submission_id:
+                        voting_options = voting_options_dict.get(submission_id)
+                        if not voting_options:
+                            # Try case-insensitive lookup
+                            for k, v in voting_options_dict.items():
+                                if str(k).lower() == str(submission_id).lower():
+                                    voting_options = v
+                                    break
+                        if voting_options:
+                            options_str = ", ".join(voting_options)
+                            print(f"      (Voting Options: {options_str})")
+            else:
+                print(f"  * {ph_name}: (No items added)")
+        if not has_items_anywhere:
+            pass
+    else:
+        print("\nAgenda Items: None")
+
 def parse_arguments():
     parser = argparse.ArgumentParser(description="Search and view meetings on Rationaletech CHub.")
     parser.add_argument(
@@ -291,16 +332,75 @@ def main():
                 
                 # Extract and list available actions inside subloop
                 while True:
-                    actions = details.get('availableActions', [])
+                    # 1. Fetch normal meeting actions
+                    meeting_actions = details.get('availableActions', [])
+                    
+                    # 2. Build list of unified actions (meeting actions + submission votes)
+                    unified_actions = []
+                    for act in meeting_actions:
+                        unified_actions.append({
+                            "type": "meeting",
+                            "actionId": act.get('actionId', 'N/A'),
+                            "isDisabled": act.get('isDisabled', False),
+                            "formProviderUrl": act.get('formProviderUrl'),
+                            "original_act": act
+                        })
+                    
+                    # Find all agenda submissions that have voting options
+                    voting_options_dict = details.get('votingOptionsBySubmission', details.get('votingOptionsPerSubmission', {}))
+                    placeholders = details.get('agendaPlaceholders', [])
+                    if isinstance(placeholders, dict):
+                        placeholders = list(placeholders.values())
+                        
+                    vote_actions_staged = []
+                    if isinstance(placeholders, list) and voting_options_dict:
+                        for ph in placeholders:
+                            ph_items = ph.get('items', ph.get('agendaItems', ph.get('submissions', [])))
+                            for item in ph_items:
+                                sub_id = item.get('submissionId', item.get('id'))
+                                disp_id = item.get('displayId', 'N/A')
+                                title = item.get('title', item.get('subject', 'No Title'))
+                                if sub_id:
+                                    voting_options = voting_options_dict.get(sub_id)
+                                    if not voting_options:
+                                        # Try case-insensitive lookup
+                                        for k, v in voting_options_dict.items():
+                                            if str(k).lower() == str(sub_id).lower():
+                                                voting_options = v
+                                                break
+                                    if voting_options:
+                                        for vote_val in voting_options:
+                                            vote_actions_staged.append({
+                                                "type": "vote",
+                                                "actionId": f"VOTE_{vote_val}",
+                                                "label": f"Vote '{vote_val}' on Submission {disp_id} ('{title[:25]}...')",
+                                                "isDisabled": False,
+                                                "submissionId": sub_id,
+                                                "voteValue": vote_val,
+                                                "meetingId": meeting_uuid
+                                            })
+                    
                     print("\nAvailable Actions:")
-                    if actions:
-                        for idx_act, act in enumerate(actions, 1):
-                            action_id = act.get('actionId', 'N/A')
-                            is_disabled = act.get('isDisabled', False)
-                            status_str = " (Disabled)" if is_disabled else ""
-                            print(f"  [{idx_act}] {action_id}{status_str}")
-                    else:
+                    idx_act = 1
+                    if unified_actions:
+                        print("  -- Meeting Actions --")
+                        for act in unified_actions:
+                            status_str = " (Disabled)" if act["isDisabled"] else ""
+                            print(f"  [{idx_act}] {act['actionId']}{status_str}")
+                            act["list_index"] = idx_act
+                            idx_act += 1
+                            
+                    if vote_actions_staged:
+                        print("  -- Agenda Submission Voting --")
+                        for act in vote_actions_staged:
+                            print(f"  [{idx_act}] {act['label']}")
+                            act["list_index"] = idx_act
+                            unified_actions.append(act)
+                            idx_act += 1
+                            
+                    if not unified_actions and not vote_actions_staged:
                         print("  - None")
+                        
                     print("="*50)
                     
                     try:
@@ -312,9 +412,9 @@ def main():
                         break
 
                     try:
-                        act_idx = int(act_choice) - 1
-                        if 0 <= act_idx < len(actions):
-                            selected_act = actions[act_idx]
+                        act_choice_idx = int(act_choice) - 1
+                        if 0 <= act_choice_idx < len(unified_actions):
+                            selected_act = unified_actions[act_choice_idx]
                             action_id = selected_act.get('actionId', 'N/A')
                             
                             if selected_act.get('isDisabled', False):
@@ -322,7 +422,15 @@ def main():
                                 time.sleep(1.5)
                                 continue
                                 
-                            form_provider_url = selected_act.get('formProviderUrl')
+                            # If it is a vote action, dynamically construct the formProviderUrl
+                            if selected_act.get('type') == 'vote':
+                                sub_id = selected_act['submissionId']
+                                vote_val = selected_act['voteValue']
+                                m_id = selected_act['meetingId']
+                                form_provider_url = f"/ExecutableActionInfos/{sub_id}/executable-action-info/VoteForAgendaItem?title={vote_val}&voteValue={vote_val}&meetingId={m_id}"
+                            else:
+                                form_provider_url = selected_act.get('formProviderUrl')
+                                
                             if not form_provider_url:
                                 print(f"Error: No form provider URL specified for action '{action_id}'.")
                                 time.sleep(1.5)
@@ -383,7 +491,7 @@ def main():
                                 print_details_card(details)
                                 continue
                         else:
-                            print(f"Number out of range. Please enter an action number between 1 and {len(actions)}.")
+                            print(f"Number out of range. Please enter an action number between 1 and {len(unified_actions)}.")
                             time.sleep(1.5)
                     except ValueError:
                         print("Invalid input. Please enter a valid number.")
