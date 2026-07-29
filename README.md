@@ -12,6 +12,7 @@ A clean, robust, zero-dependency suite of Python scripts to automate, create, in
 ├── .gitignore                 # Extensively configures untracked files
 ├── README.md                  # This documentation
 ├── login.py                   # Automated OIDC session login helper
+├── list-users.py              # Paginated user browser & terminal-auth helper
 ├── create-submission.py       # Submission creation helper
 ├── create-meeting.py          # Meeting creation helper
 ├── submission-payloads/       # Custom payloads folder for Submissions
@@ -45,7 +46,18 @@ Alternatively, log in instantly without prompts by passing the email via flag:
 ./login.py -e sysadmin
 ```
 
-### 3. Configure Credentials Manually (Optional)
+### 3. Browse and Log In as System Users (`list-users.py`)
+To discover and log in as other system users (such as specific managers, testers, or operators), you can use the interactive users listing script:
+* Run the search helper (the script prompts you to choose which of your configured accounts should perform the search query):
+  ```bash
+  ./list-users.py
+  ```
+* Navigating results:
+  * Enter `n` to go to the next page, or `p` for the previous page.
+  * Enter `s <indices>` to automatically select one or multiple users to log in (e.g. `s 1, 3` or `s 2`).
+  * The script dynamically requests mock OIDC tokens and cookies for the selected users, authenticates them on CHub, and registers/saves their active credentials inside `.config.json` instantly!
+
+### 4. Configure Credentials Manually (Optional)
 Edit the hidden `.config.json` with your target `HOST` and an array of configured `USERS`:
 ```json
 {
