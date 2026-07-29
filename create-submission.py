@@ -42,7 +42,22 @@ def parse_arguments():
         type=str,
         help="Specify submission title directly (skips the title prompt)"
     )
+    parser.add_argument(
+        '-s', '--type',
+        type=str,
+        help="Specify the submission type ID or Label directly (skips the type selection prompt)"
+    )
     return parser.parse_args()
+
+def extract_type_options(create_response):
+    form_sections = create_response.get("formSections", [])
+    for section in form_sections:
+        controls = section.get("formControls", [])
+        for ctrl in controls:
+            if ctrl.get("key") == "typeId":
+                props = ctrl.get("props", {})
+                return props.get("options", [])
+    return []
 
 def main():
     args = parse_arguments()
@@ -107,13 +122,65 @@ def main():
         sys.exit(1)
     print(f" -> Success! Created Submission ID: {submission_id}")
 
+    # Extract Submission Type Options from the response
+    options = extract_type_options(res)
+    selected_type_id = None
+    selected_type_label = None
+
+    if args.type is not None:
+        search_term = args.type.strip().lower()
+        for option in options:
+            if str(option.get('id')) == search_term or str(option.get('label', '')).lower() == search_term:
+                selected_type_id = option.get('id')
+                selected_type_label = option.get('label')
+                break
+        
+        if selected_type_id is None:
+            print(f"\nError: Invalid submission type '{args.type}' specified.", file=sys.stderr)
+            print("Available options are:", file=sys.stderr)
+            for opt in options:
+                print(f"  ID: {opt.get('id')}  -  '{opt.get('label')}'", file=sys.stderr)
+            sys.exit(1)
+    else:
+        if options:
+            print("\nAvailable Submission Types:")
+            for index, option in enumerate(options, 1):
+                print(f"  [{index}] {option.get('label')} (ID: {option.get('id')})")
+            
+            while True:
+                try:
+                    selection = input(f"Select a type [1-{len(options)}]: ").strip()
+                    if not selection:
+                        print("Selection cannot be empty. Please enter a number.")
+                        continue
+                    idx = int(selection) - 1
+                    if 0 <= idx < len(options):
+                        selected_option = options[idx]
+                        selected_type_id = selected_option.get('id')
+                        selected_type_label = selected_option.get('label')
+                        break
+                    else:
+                        print(f"Number out of range. Please enter a number between 1 and {len(options)}.")
+                except ValueError:
+                    print("Invalid input. Please enter a valid number.")
+                except (KeyboardInterrupt, EOFError):
+                    print("\nOperation cancelled by user.")
+                    sys.exit(0)
+        else:
+            # Fallback to defaults if no options are present in the response
+            print("\nWarning: No submission type options found in server response. Defaulting to Internal Transfer Request.")
+            selected_type_id = 101
+            selected_type_label = "Internal Transfer Requests"
+
+    print(f" -> Selected Submission Type: {selected_type_label} (ID: {selected_type_id})")
+
     # 2. Second Request: Save Form Data (Set Type)
-    print("[2/3] Initializing submission type to Internal Transfer Request (ID: 101)...")
+    print("\n[2/3] Initializing submission type on server...")
     set_type_url = f"{host}/submissions/{submission_id}/save-form-data"
     type_data = {
-        "typeId": 101,
+        "typeId": selected_type_id,
         "typeId__listItems": [
-            {"id": 105, "label": "New Hire Requests"}
+            {"id": selected_type_id, "label": selected_type_label}
         ]
     }
     make_request(set_type_url, data_dict=type_data)
@@ -131,7 +198,7 @@ def main():
             sys.exit(0)
 
     # 3. Third Request: Save custom form data
-    print(f"[3/3] Reading save-submission-data.json and applying title '{submission_title}'...")
+    print(f"\n[3/3] Reading save-submission-data.json and applying title '{submission_title}'...")
     try:
         with open('save-submission-data.json', 'r') as f:
             submission_data = json.load(f)
