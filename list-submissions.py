@@ -3,6 +3,7 @@ import argparse
 import json
 import os
 import sys
+import time
 import urllib.request
 import urllib.parse
 import http.cookiejar
@@ -158,6 +159,23 @@ def main():
             print(f"Error connecting to server search endpoint: {e}", file=sys.stderr)
             sys.exit(1)
 
+    def make_post_request(url, data_dict=None):
+        payload = json.dumps(data_dict).encode('utf-8') if data_dict is not None else b'{}'
+        req = urllib.request.Request(url, data=payload, headers=headers, method='POST')
+        try:
+            with urllib.request.urlopen(req) as r:
+                return json.loads(r.read().decode('utf-8'))
+        except urllib.error.HTTPError as e:
+            print(f"Error: HTTP POST request failed with status {e.code}", file=sys.stderr)
+            try:
+                print(f"Response Body: {e.read().decode('utf-8')}", file=sys.stderr)
+            except Exception:
+                pass
+            sys.exit(1)
+        except Exception as e:
+            print(f"Error executing POST request: {e}", file=sys.stderr)
+            sys.exit(1)
+
     page = args.page
     search_term = args.query if args.query is not None else ""
     
@@ -213,6 +231,7 @@ def main():
             options_text.append("'p' for previous page")
         options_text.append("'n' for next page")
         options_text.append("'f <query>' to filter list")
+        options_text.append("'<number>' to view details")
         if search_term:
             options_text.append("'c' to clear filter")
         options_text.append("'q' to quit")
@@ -228,6 +247,148 @@ def main():
             continue
 
         choice_lower = choice.lower().strip()
+
+        # Check if choice is a valid number to view details
+        try:
+            idx = int(choice_lower) - 1
+            if 0 <= idx < len(items):
+                selected_item = items[idx]
+                submission_uuid = selected_item.get('id')
+                if not submission_uuid:
+                    print("Error: Could not retrieve submission UUID.")
+                    time.sleep(1.5)
+                    continue
+                
+                # Fetch full details
+                print(f"\nFetching full details for submission {selected_item.get('displayId', 'N/A')}...")
+                detail_url = f"{host}/submissions/{submission_uuid}"
+                details = make_get_request(detail_url)
+                
+                # Print details cleanly
+                print("\n" + "="*50)
+                print(f"SUBMISSION DETAILS (Display ID: {details.get('displayId', 'N/A')})")
+                print("="*50)
+                print(f"UUID:       {details.get('id', 'N/A')}")
+                print(f"Title:      {details.get('title', details.get('subject', 'No Title'))}")
+                print(f"Status:     {details.get('status', 'N/A')}")
+                print(f"Created:    {details.get('creationTimestamp', 'N/A')}")
+                
+                # Extract and list available actions
+                while True:
+                    actions = details.get('availableActions', [])
+                    print("\nAvailable Actions:")
+                    if actions:
+                        for idx_act, act in enumerate(actions, 1):
+                            action_id = act.get('actionId', 'N/A')
+                            is_disabled = act.get('isDisabled', False)
+                            status_str = " (Disabled)" if is_disabled else ""
+                            print(f"  [{idx_act}] {action_id}{status_str}")
+                    else:
+                        print("  - None")
+                    print("="*50)
+                    
+                    try:
+                        act_choice = input("\nSelect an action number to execute (or press Enter to return): ").strip()
+                    except (KeyboardInterrupt, EOFError):
+                        break
+
+                    if not act_choice:
+                        break
+
+                    try:
+                        act_idx = int(act_choice) - 1
+                        if 0 <= act_idx < len(actions):
+                            selected_act = actions[act_idx]
+                            action_id = selected_act.get('actionId', 'N/A')
+                            
+                            if selected_act.get('isDisabled', False):
+                                print(f"Error: Action '{action_id}' is currently disabled.")
+                                time.sleep(1.5)
+                                continue
+                                
+                            form_provider_url = selected_act.get('formProviderUrl')
+                            if not form_provider_url:
+                                print(f"Error: No form provider URL specified for action '{action_id}'.")
+                                time.sleep(1.5)
+                                continue
+                                
+                            # Resolve form provider URL
+                            if form_provider_url.startswith('/'):
+                                action_info_url = f"{host}{form_provider_url}"
+                            else:
+                                action_info_url = f"{host}/{form_provider_url}"
+                                
+                            print(f"\nFetching action details for '{action_id}'...")
+                            action_details = make_get_request(action_info_url)
+                            
+                            action_post_url = action_details.get('url', '')
+                            if not action_post_url:
+                                print(f"Error: Action provider response did not return a submit URL.")
+                                time.sleep(1.5)
+                                continue
+                                
+                            if not action_post_url.startswith('/'):
+                                action_post_url = '/' + action_post_url
+                            full_post_url = f"{host}{action_post_url}"
+                            
+                            # Parse fields and prompt user
+                            form_fields = action_details.get('formFields', [])
+                            post_payload = {}
+                            
+                            print(f"\nExecuting '{action_id}' Action Form:")
+                            for field in form_fields:
+                                key = field.get('key', field.get('name'))
+                                if not key:
+                                    continue
+                                field_type = field.get('type', '')
+                                
+                                if field_type == 'textarea':
+                                    label = field.get('props', {}).get('label', field.get('label', key))
+                                    try:
+                                        val = input(f"  Enter {label}: ").strip()
+                                    except (KeyboardInterrupt, EOFError):
+                                        print("\nAction cancelled.")
+                                        break
+                                    post_payload[key] = val
+                                else:
+                                    post_payload[key] = field.get('value', '')
+                            else:
+                                # Send action execute POST
+                                print(" -> Submitting action execution request...")
+                                make_post_request(full_post_url, data_dict=post_payload)
+                                print(f" -> Success! Action '{action_id}' executed.")
+                                time.sleep(1.5)
+                                
+                                # Refresh details from server
+                                print("\nRefreshing submission details...")
+                                details = make_get_request(detail_url)
+                                
+                                # Print refreshed details cleanly
+                                print("\n" + "="*50)
+                                print(f"SUBMISSION DETAILS (Display ID: {details.get('displayId', 'N/A')})")
+                                print("="*50)
+                                print(f"UUID:       {details.get('id', 'N/A')}")
+                                print(f"Title:      {details.get('title', details.get('subject', 'No Title'))}")
+                                print(f"Status:     {details.get('status', 'N/A')}")
+                                print(f"Created:    {details.get('creationTimestamp', 'N/A')}")
+                                continue
+                        else:
+                            print(f"Number out of range. Please enter an action number between 1 and {len(actions)}.")
+                            time.sleep(1.5)
+                    except ValueError:
+                        print("Invalid input. Please enter a valid number.")
+                        time.sleep(1.5)
+                
+                print()
+                continue
+            else:
+                print(f"Number out of range. Please enter a number between 1 and {len(items)}.")
+                time.sleep(1.5)
+                print()
+                continue
+        except ValueError:
+            # Not a number, fallback to command choices
+            pass
 
         if choice_lower == 'q':
             print("Exiting.")
