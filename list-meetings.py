@@ -102,6 +102,28 @@ def extract_xsrf_token(cookie_str):
             return part[len('XSRF-TOKEN='):]
     return 'CfDJ8B3cU1ZsNd1MirISpSbNJd9xEGENsXFsuDl7V5fCVCB8-pA-dO7yChyFNS8TfS_q_-Gz5K5WJeKA4q_0zrp2HZ0xaXWgMy2fIYPUWiVK851Gk2rDAn-zV9tVPYhlouwMrtmtQPeeP9L-8KxFeDtsLPVuevjpLwWrJjvto0piDPQUVGlit2-AOQK2ByM-LOAYHQ'
 
+def get_voting_options_for_item(item):
+    # Returns a list of dicts: [{"value": str, "formProviderUrl": str, "isDisabled": bool}]
+    voting_options = []
+    item_actions = item.get('actions', [])
+    if isinstance(item_actions, list):
+        for act in item_actions:
+            if isinstance(act, dict) and act.get('formId') == 'VoteForAgendaItem':
+                vote_val = act.get('actionId')
+                if not vote_val:
+                    params = act.get('parameters', {})
+                    if isinstance(params, dict):
+                        vote_val = params.get('voteValue') or params.get('title')
+                if vote_val:
+                    # Avoid duplicates
+                    if not any(opt['value'] == vote_val for opt in voting_options):
+                        voting_options.append({
+                            "value": vote_val,
+                            "formProviderUrl": act.get('formProviderUrl'),
+                            "isDisabled": act.get('isDisabled', False)
+                        })
+    return voting_options
+
 def print_details_card(details, label="MEETING DETAILS"):
     print("\n" + "="*50)
     print(f"{label} (Display ID: {details.get('displayId', details.get('meetingNo', 'N/A'))})")
@@ -146,19 +168,11 @@ def print_details_card(details, label="MEETING DETAILS"):
                     status = item.get('status', 'N/A')
                     print(f"    - [{index}] ID: {disp_id} - {title} (Status: {status})")
                     
-                    # Extract and display voting options if present for this submissionId
-                    voting_options_dict = details.get('votingOptionsBySubmission', details.get('votingOptionsPerSubmission', {}))
-                    if voting_options_dict and submission_id:
-                        voting_options = voting_options_dict.get(submission_id)
-                        if not voting_options:
-                            # Try case-insensitive lookup
-                            for k, v in voting_options_dict.items():
-                                if str(k).lower() == str(submission_id).lower():
-                                    voting_options = v
-                                    break
-                        if voting_options:
-                            options_str = ", ".join(voting_options)
-                            print(f"      (Voting Options: {options_str})")
+                    # Extract and display voting options
+                    voting_options = get_voting_options_for_item(item)
+                    if voting_options:
+                        options_str = ", ".join([opt["value"] for opt in voting_options])
+                        print(f"      (Voting Options: {options_str})")
             else:
                 print(f"  * {ph_name}: (No items added)")
         if not has_items_anywhere:
@@ -353,13 +367,12 @@ def main():
                         })
                     
                     # Find all agenda submissions that have voting options
-                    voting_options_dict = details.get('votingOptionsBySubmission', details.get('votingOptionsPerSubmission', {}))
                     placeholders = details.get('agendaPlaceholders', [])
                     if isinstance(placeholders, dict):
                         placeholders = list(placeholders.values())
                         
                     vote_actions_staged = []
-                    if isinstance(placeholders, list) and voting_options_dict:
+                    if isinstance(placeholders, list):
                         for ph in placeholders:
                             ph_items = ph.get('items', ph.get('agendaItems', ph.get('submissions', [])))
                             for item in ph_items:
@@ -367,23 +380,20 @@ def main():
                                 disp_id = item.get('displayId', 'N/A')
                                 title = item.get('title', item.get('subject', 'No Title'))
                                 if sub_id:
-                                    voting_options = voting_options_dict.get(sub_id)
-                                    if not voting_options:
-                                        # Try case-insensitive lookup
-                                        for k, v in voting_options_dict.items():
-                                            if str(k).lower() == str(sub_id).lower():
-                                                voting_options = v
-                                                break
+                                    voting_options = get_voting_options_for_item(item)
                                     if voting_options:
-                                        for vote_val in voting_options:
+                                        for opt in voting_options:
+                                            vote_val = opt["value"]
+                                            form_prov_url = opt.get("formProviderUrl")
                                             vote_actions_staged.append({
                                                 "type": "vote",
                                                 "actionId": f"VOTE_{vote_val}",
                                                 "label": f"Vote '{vote_val}' on Submission {disp_id} ('{title[:25]}...')",
-                                                "isDisabled": False,
+                                                "isDisabled": opt.get("isDisabled", False),
                                                 "submissionId": sub_id,
                                                 "voteValue": vote_val,
-                                                "meetingId": meeting_uuid
+                                                "meetingId": meeting_uuid,
+                                                "formProviderUrl": form_prov_url
                                             })
                     
                     print("\nAvailable Actions:")
@@ -433,7 +443,9 @@ def main():
                                 sub_id = selected_act['submissionId']
                                 vote_val = selected_act['voteValue']
                                 m_id = selected_act['meetingId']
-                                form_provider_url = f"/ExecutableActionInfos/{sub_id}/executable-action-info/VoteForAgendaItem?title={vote_val}&voteValue={vote_val}&meetingId={m_id}"
+                                form_provider_url = selected_act.get('formProviderUrl')
+                                if not form_provider_url:
+                                    form_provider_url = f"/ExecutableActionInfos/{sub_id}/executable-action-info/VoteForAgendaItem?title={vote_val}&voteValue={vote_val}&meetingId={m_id}"
                             else:
                                 form_provider_url = selected_act.get('formProviderUrl')
                                 
