@@ -8,7 +8,7 @@ import urllib.error
 
 CONFIG_FILE = ".config.json"
 
-from lib.utils import select_user, print_user_header
+from lib.utils import select_user, print_user_header, clear_screen, print_app_header, print_app_footer
 
 class SameHostRedirectHandler(urllib.request.HTTPRedirectHandler):
     def redirect_request(self, req, fp, code, msg, headers, newurl):
@@ -120,24 +120,9 @@ def main():
 
     # Select the active user credentials
     username, cookie = select_user(users, args.user)
-    print_user_header(username)
-
-    # Show configuration and prompt for confirmation if not skipped via -y/--yes
-    print("Configuration details:")
-    print(f"  HOST:   {host}")
-    truncated_cookie = cookie[:60] + "..." if len(cookie) > 60 else cookie
-    print(f"  COOKIE: {truncated_cookie}")
     
-    if not args.yes:
-        try:
-            confirm = input("\nDo you want to proceed with this configuration? [y/N]: ").strip().lower()
-            if confirm not in ('y', 'yes'):
-                print("Aborted.")
-                sys.exit(0)
-            print() # Insert newline for nicer output formatting
-        except (KeyboardInterrupt, EOFError):
-            print("\nAborted.")
-            sys.exit(0)
+    clear_screen()
+    print_app_header(host)
 
     headers = {
         'Accept': 'application/json, text/plain, */*',
@@ -346,6 +331,7 @@ def main():
     # Complete Message
     print("\nSubmission is created.")
     print(f"{host}/#/submissions/{submission_id}")
+    print_app_footer(username)
 
 if __name__ == '__main__':
     main()
