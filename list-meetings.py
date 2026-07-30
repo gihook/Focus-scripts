@@ -166,7 +166,17 @@ def print_details_card(details, label="MEETING DETAILS"):
                     submission_id = item.get('submissionId', item.get('id'))
                     title = item.get('title', item.get('subject', 'No Title'))
                     status = item.get('status', 'N/A')
-                    print(f"    - [{index}] ID: {disp_id} - {title} (Status: {status})")
+                    my_vote = item.get('myVote')
+                    voted_pct = item.get('votedPercentage')
+                    
+                    vote_info = []
+                    if my_vote is not None:
+                        vote_info.append(f"My Vote: {my_vote}")
+                    if voted_pct is not None:
+                        vote_info.append(f"Voted: {voted_pct}%")
+                    
+                    vote_info_str = f" ({', '.join(vote_info)})" if vote_info else ""
+                    print(f"    - [{index}] ID: {disp_id} - {title} (Status: {status}){vote_info_str}")
                     
                     # Extract and display voting options
                     voting_options = get_voting_options_for_item(item)
