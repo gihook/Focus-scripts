@@ -7,11 +7,11 @@ def print_main_help():
     print("""Usage: ./run [subcommand] [action] [options]
 
 Subcommands:
-  submission create [options]     Create a new submission
-  submission list [options]       List/search submissions
-  meeting create [options]        Create a new meeting
-  meeting list [options]          List/search meetings
-  user list [options]             List/search system users
+  submission create [options]     Create a new submission   (Shortcut: s c)
+  submission list [options]       List/search submissions   (Shortcut: s l)
+  meeting create [options]        Create a new meeting      (Shortcut: m c)
+  meeting list [options]          List/search meetings      (Shortcut: m l)
+  user list [options]             List/search system users  (Shortcut: u l)
 
 For details on flags and options for any command, append --help:
   Example: ./run submission create --help""")
@@ -21,19 +21,19 @@ def print_subcommand_help(subcommand):
         print("""Usage: ./run submission [action] [options]
 
 Actions:
-  create [options]        Create a new submission
-  list [options]          List/search submissions""")
+  create [options]        Create a new submission   (Shortcut: c)
+  list [options]          List/search submissions   (Shortcut: l)""")
     elif subcommand == "meeting":
         print("""Usage: ./run meeting [action] [options]
 
 Actions:
-  create [options]        Create a new meeting
-  list [options]          List/search meetings""")
+  create [options]        Create a new meeting      (Shortcut: c)
+  list [options]          List/search meetings      (Shortcut: l)""")
     elif subcommand == "user":
         print("""Usage: ./run user [action] [options]
 
 Actions:
-  list [options]          List/search system users""")
+  list [options]          List/search system users  (Shortcut: l)""")
 
 def main():
     args = sys.argv[1:]
@@ -43,13 +43,16 @@ def main():
         
     subcommand = args[0].lower()
     
-    # Normalize subcommands to singular
-    if subcommand == "submissions":
-        subcommand = "submission"
-    elif subcommand == "meetings":
-        subcommand = "meeting"
-    elif subcommand == "users":
-        subcommand = "user"
+    # Map shortcuts and plural forms to singular subcommands
+    subcommand_map = {
+        "s": "submission",
+        "submissions": "submission",
+        "m": "meeting",
+        "meetings": "meeting",
+        "u": "user",
+        "users": "user"
+    }
+    subcommand = subcommand_map.get(subcommand, subcommand)
         
     if subcommand not in ("submission", "meeting", "user"):
         print(f"Error: Unknown subcommand '{args[0]}'\n")
@@ -62,27 +65,47 @@ def main():
         
     action = args[1].lower()
     
-    # Map subcommand and action to script module path
-    module_map = {
-        ("submission", "create"): "lib.create_submission",
-        ("submission", "list"): "lib.list_submissions",
-        ("submission", "search"): "lib.list_submissions",
-        ("meeting", "create"): "lib.create_meeting",
-        ("meeting", "list"): "lib.list_meetings",
-        ("meeting", "search"): "lib.list_meetings",
-        ("user", "list"): "lib.list_users",
-        ("user", "search"): "lib.list_users"
+    # Map shortcuts to actions
+    action_map = {
+        "c": "create",
+        "l": "list"
     }
+    action = action_map.get(action, action)
     
-    module_name = module_map.get((subcommand, action))
-    if not module_name:
-        print(f"Error: Unknown action '{args[1]}' for subcommand '{subcommand}'\n")
-        print_subcommand_help(subcommand)
-        sys.exit(1)
+    # Check if the second argument is a direct ID lookup (not a standard action)
+    is_direct_lookup = action not in ("create", "list", "search")
+    
+    if is_direct_lookup:
+        if subcommand not in ("submission", "meeting"):
+            print(f"Error: Subcommand '{subcommand}' does not support direct ID lookup.\n")
+            print_subcommand_help(subcommand)
+            sys.exit(1)
+            
+        module_name = "lib.list_submissions" if subcommand == "submission" else "lib.list_meetings"
+        # Forward the ID (args[1]) and any other options
+        cmd = [sys.executable, "-m", module_name, args[1]] + args[2:]
+    else:
+        # Map subcommand and action to script module path
+        module_map = {
+            ("submission", "create"): "lib.create_submission",
+            ("submission", "list"): "lib.list_submissions",
+            ("submission", "search"): "lib.list_submissions",
+            ("meeting", "create"): "lib.create_meeting",
+            ("meeting", "list"): "lib.list_meetings",
+            ("meeting", "search"): "lib.list_meetings",
+            ("user", "list"): "lib.list_users",
+            ("user", "search"): "lib.list_users"
+        }
         
-    # Forward all remaining arguments to the target script
-    remaining_args = args[2:]
-    cmd = [sys.executable, "-m", module_name] + remaining_args
+        module_name = module_map.get((subcommand, action))
+        if not module_name:
+            print(f"Error: Unknown action '{args[1]}' for subcommand '{subcommand}'\n")
+            print_subcommand_help(subcommand)
+            sys.exit(1)
+            
+        # Forward all remaining arguments to the target script
+        remaining_args = args[2:]
+        cmd = [sys.executable, "-m", module_name] + remaining_args
     
     # Ensure root path is added to PYTHONPATH so modules inside lib can import lib.utils
     env = os.environ.copy()

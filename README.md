@@ -38,23 +38,31 @@ All console activities can be invoked through a single executable `./run`. To ex
 ```
 
 ### Main Commands:
-* **Create a Submission:**
+* **Create a Submission:** `(Shortcut: ./run s c)`
   ```bash
   ./run submission create [options]
   ```
-* **Browse & Search Submissions:**
+* **Browse & Search Submissions:** `(Shortcut: ./run s l)`
   ```bash
   ./run submission list [options]
   ```
-* **Create a Meeting:**
+* **Direct Submission Lookup (by UUID or Display ID):** `(Shortcut: ./run s <id_or_uuid>)`
+  ```bash
+  ./run submission <id_or_uuid> [options]
+  ```
+* **Create a Meeting:** `(Shortcut: ./run m c)`
   ```bash
   ./run meeting create [options]
   ```
-* **Browse & Search Meetings:**
+* **Browse & Search Meetings:** `(Shortcut: ./run m l)`
   ```bash
   ./run meeting list [options]
   ```
-* **Browse & Auth System Users:**
+* **Direct Meeting Lookup (by UUID or Display ID):** `(Shortcut: ./run m <id_or_uuid>)`
+  ```bash
+  ./run meeting <id_or_uuid> [options]
+  ```
+* **Browse & Auth System Users:** `(Shortcut: ./run u l)`
   ```bash
   ./run user list [options]
   ```
