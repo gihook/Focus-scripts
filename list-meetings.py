@@ -11,6 +11,8 @@ import time
 
 CONFIG_FILE = ".config.json"
 
+from utils import format_workflow_steps_ascii
+
 class SameHostRedirectHandler(urllib.request.HTTPRedirectHandler):
     def redirect_request(self, req, fp, code, msg, headers, newurl):
         new_req = super().redirect_request(req, fp, code, msg, headers, newurl)
@@ -146,6 +148,8 @@ def print_details_card(details, label="MEETING DETAILS"):
                 s_status = step.get('label', step.get('status', 'N/A'))
                 s_type = step.get('stepType', 'N/A')
                 print(f"  - Step #{idx}: Status={s_status} (Type={s_type})")
+        if steps:
+            print(format_workflow_steps_ascii(steps))
 
     # Agenda Placeholders / Items information
     placeholders = details.get('agendaPlaceholders', [])
