@@ -81,8 +81,9 @@ def parse_arguments():
     )
     return parser.parse_args()
 
-def login_user(host, email, config):
-    print(f" -> Initiating login flow for user '{email}' against '{host}'...")
+def login_user(host, email, config, full_name=None, designation=None):
+    display_user = f"'{full_name}' ({designation})" if full_name and designation else f"'{email}'"
+    print(f" -> Initiating login flow for user {display_user} against '{host}'...")
     cookie_jar = http.cookiejar.CookieJar()
     handler = urllib.request.HTTPCookieProcessor(cookie_jar)
     opener = urllib.request.build_opener(handler)
@@ -175,17 +176,20 @@ def login_user(host, email, config):
         users_list.append({"USERNAME": "Default", "COOKIE": config["COOKIE"]})
         del config["COOKIE"]
 
+    target_username = f"{full_name} ({designation})" if full_name and designation else email
+
     user_updated = False
     for u in users_list:
-        if u.get("USERNAME", "").lower() == email.lower():
+        u_name = u.get("USERNAME", "")
+        if u_name.lower() == target_username.lower() or u_name.lower() == email.lower():
             u["COOKIE"] = cookie_string
-            u["USERNAME"] = email  # preserve original casing
+            u["USERNAME"] = target_username
             user_updated = True
             break
 
     if not user_updated:
         users_list.append({
-            "USERNAME": email,
+            "USERNAME": target_username,
             "COOKIE": cookie_string
         })
 
@@ -337,12 +341,16 @@ def main():
                     print(f" -> Skipping user at index {idx+1}: email property is missing.")
                     continue
                 
-                success = login_user(host, user_email, config)
+                full_name = user_item.get('fullName', f"{user_item.get('firstName', '')} {user_item.get('lastName', '')}".strip() or 'N/A')
+                designation = user_item.get('designation', 'N/A')
+                display_user = f"'{full_name}' ({designation})"
+                
+                success = login_user(host, user_email, config, full_name, designation)
                 if success:
                     success_count += 1
-                    print(f" -> Success! Logged in as '{user_email}'.")
+                    print(f" -> Success! Logged in as {display_user}.")
                 else:
-                    print(f" -> Failed to log in as '{user_email}'.")
+                    print(f" -> Failed to log in as {display_user}.")
 
             # Write updated config to .config.json if at least one user logged in successfully
             if success_count > 0:
