@@ -8,6 +8,8 @@ import urllib.error
 
 CONFIG_FILE = ".config.json"
 
+from lib.utils import select_user
+
 class SameHostRedirectHandler(urllib.request.HTTPRedirectHandler):
     def redirect_request(self, req, fp, code, msg, headers, newurl):
         new_req = super().redirect_request(req, fp, code, msg, headers, newurl)
@@ -52,44 +54,6 @@ def load_config():
         sys.exit(1)
         
     return host, users
-
-def select_user(users, preselected_username=None):
-    if preselected_username is not None:
-        search_term = preselected_username.strip().lower()
-        for u in users:
-            if u.get("USERNAME", "").lower() == search_term:
-                return u.get("USERNAME"), u.get("COOKIE")
-        print(f"Error: User '{preselected_username}' not found in configuration.", file=sys.stderr)
-        print("Available users are:", file=sys.stderr)
-        for u in users:
-            print(f"  - {u.get('USERNAME')}", file=sys.stderr)
-        sys.exit(1)
-        
-    # If there is only one user in the config, skip prompt and return it directly
-    if len(users) == 1:
-        return users[0].get("USERNAME"), users[0].get("COOKIE")
-        
-    print("Available Users:")
-    for index, u in enumerate(users, 1):
-        print(f"  [{index}] {u.get('USERNAME')}")
-        
-    while True:
-        try:
-            selection = input(f"Select a user [1-{len(users)}]: ").strip()
-            if not selection:
-                print("Selection cannot be empty. Please enter a number.")
-                continue
-            idx = int(selection) - 1
-            if 0 <= idx < len(users):
-                selected_user = users[idx]
-                return selected_user.get("USERNAME"), selected_user.get("COOKIE")
-            else:
-                print(f"Number out of range. Please enter a number between 1 and {len(users)}.")
-        except ValueError:
-            print("Invalid input. Please enter a valid number.")
-        except (KeyboardInterrupt, EOFError):
-            print("\nAborted.")
-            sys.exit(0)
 
 def extract_xsrf_token(cookie_str):
     parts = cookie_str.split(';')
