@@ -403,12 +403,23 @@ def main():
                     print_app_footer(username)
                     
                     try:
-                        act_choice = input("\nSelect an action number to execute (or press Enter to return): ").strip()
+                        act_choice = input("\nSelect an action number to execute (or press Enter to return, or 'u' to switch user): ").strip()
                     except (KeyboardInterrupt, EOFError):
                         break
 
                     if not act_choice:
                         break
+
+                    if act_choice.lower() == 'u':
+                        new_username, new_cookie = select_user(users)
+                        username = new_username
+                        cookie = new_cookie
+                        headers['Cookie'] = cookie
+                        headers['X-XSRF-TOKEN'] = extract_xsrf_token(cookie)
+                        print(f"\nSwitching session to {username} and refreshing details...")
+                        time.sleep(1)
+                        details = make_get_request(detail_url)
+                        continue
 
                     try:
                         act_choice_idx = int(act_choice) - 1
