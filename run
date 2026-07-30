@@ -1,0 +1,100 @@
+#!/usr/bin/env python3
+import sys
+import os
+import subprocess
+
+def print_main_help():
+    print("""Usage: ./run [subcommand] [action] [options]
+
+Subcommands:
+  submission create [options]     Create a new submission
+  submission list [options]       List/search submissions
+  meeting create [options]        Create a new meeting
+  meeting list [options]          List/search meetings
+  user list [options]             List/search system users
+
+For details on flags and options for any command, append --help:
+  Example: ./run submission create --help""")
+
+def print_subcommand_help(subcommand):
+    if subcommand == "submission":
+        print("""Usage: ./run submission [action] [options]
+
+Actions:
+  create [options]        Create a new submission
+  list [options]          List/search submissions""")
+    elif subcommand == "meeting":
+        print("""Usage: ./run meeting [action] [options]
+
+Actions:
+  create [options]        Create a new meeting
+  list [options]          List/search meetings""")
+    elif subcommand == "user":
+        print("""Usage: ./run user [action] [options]
+
+Actions:
+  list [options]          List/search system users""")
+
+def main():
+    args = sys.argv[1:]
+    if not args or args[0] in ("--help", "-h", "help"):
+        print_main_help()
+        sys.exit(0)
+        
+    subcommand = args[0].lower()
+    
+    # Normalize subcommands to singular
+    if subcommand == "submissions":
+        subcommand = "submission"
+    elif subcommand == "meetings":
+        subcommand = "meeting"
+    elif subcommand == "users":
+        subcommand = "user"
+        
+    if subcommand not in ("submission", "meeting", "user"):
+        print(f"Error: Unknown subcommand '{args[0]}'\n")
+        print_main_help()
+        sys.exit(1)
+        
+    if len(args) < 2 or args[1] in ("--help", "-h", "help"):
+        print_subcommand_help(subcommand)
+        sys.exit(0)
+        
+    action = args[1].lower()
+    
+    # Map subcommand and action to script module path
+    module_map = {
+        ("submission", "create"): "lib.create_submission",
+        ("submission", "list"): "lib.list_submissions",
+        ("submission", "search"): "lib.list_submissions",
+        ("meeting", "create"): "lib.create_meeting",
+        ("meeting", "list"): "lib.list_meetings",
+        ("meeting", "search"): "lib.list_meetings",
+        ("user", "list"): "lib.list_users",
+        ("user", "search"): "lib.list_users"
+    }
+    
+    module_name = module_map.get((subcommand, action))
+    if not module_name:
+        print(f"Error: Unknown action '{args[1]}' for subcommand '{subcommand}'\n")
+        print_subcommand_help(subcommand)
+        sys.exit(1)
+        
+    # Forward all remaining arguments to the target script
+    remaining_args = args[2:]
+    cmd = [sys.executable, "-m", module_name] + remaining_args
+    
+    # Ensure root path is added to PYTHONPATH so modules inside lib can import lib.utils
+    env = os.environ.copy()
+    root_dir = os.path.dirname(os.path.abspath(__file__))
+    env["PYTHONPATH"] = root_dir + os.pathsep + env.get("PYTHONPATH", "")
+    
+    try:
+        subprocess.run(cmd, check=True, env=env)
+    except subprocess.CalledProcessError as e:
+        sys.exit(e.returncode)
+    except KeyboardInterrupt:
+        sys.exit(130)
+
+if __name__ == '__main__':
+    main()
