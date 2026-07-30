@@ -201,47 +201,52 @@ def main():
 
     page = args.page
     search_term = args.query if args.query is not None else ""
+    should_fetch = True
+    items = []
     
     while True:
         term_desc = f" matching '{search_term}'" if search_term else ""
-        print(f"Fetching submissions page {page}{term_desc} from server...")
-        
-        search_url = f"{host}/submissions/search?pageNumber={page}&pageSize=10"
-        if search_term:
-            search_url += f"&searchTerm={urllib.parse.quote(search_term)}"
+        if should_fetch:
+            print(f"Fetching submissions page {page}{term_desc} from server...")
             
-        res_data = make_get_request(search_url)
+            search_url = f"{host}/submissions/search?pageNumber={page}&pageSize=10"
+            if search_term:
+                search_url += f"&searchTerm={urllib.parse.quote(search_term)}"
+                
+            res_data = make_get_request(search_url)
 
-        # Extract items
-        items = []
-        if isinstance(res_data, list):
-            items = res_data
-        elif isinstance(res_data, dict):
-            items = res_data.get('items', res_data.get('results', res_data.get('data', [])))
+            # Extract items
+            items = []
+            if isinstance(res_data, list):
+                items = res_data
+            elif isinstance(res_data, dict):
+                items = res_data.get('items', res_data.get('results', res_data.get('data', [])))
+                if not items:
+                    # Fallback check
+                    for val in res_data.values():
+                        if isinstance(val, list) and all(isinstance(x, dict) for x in val):
+                            items = val
+                            break
+
             if not items:
-                # Fallback check
-                for val in res_data.values():
-                    if isinstance(val, list) and all(isinstance(x, dict) for x in val):
-                        items = val
-                        break
-
-        if not items:
-            print(f"\nNo submissions found on Page {page}{term_desc}.")
-            if page > 1:
-                print("Returning to previous page...")
-                page -= 1
-                time.sleep(1)
-                continue
-            else:
-                # If they filter and get no results on page 1, let them clear or change filter
-                if search_term:
-                    print("\nYou can clear the search filter using 'c' or enter a new one.")
+                print(f"\nNo submissions found on Page {page}{term_desc}.")
+                if page > 1:
+                    print("Returning to previous page...")
+                    page -= 1
+                    time.sleep(1)
+                    should_fetch = True
+                    continue
                 else:
-                    print("Exiting.")
-                    sys.exit(0)
+                    # If they filter and get no results on page 1, let them clear or change filter
+                    if search_term:
+                        print("\nYou can clear the search filter using 'c' or enter a new one.")
+                        items = []
+                    else:
+                        print("Exiting.")
+                        sys.exit(0)
 
         # Display submissions table
-        print(f"\n--- Submissions (Page {page}){term_desc} ---")
+        print(f"\n--- Submissions (Page {page}){term_desc if search_term else ''} ---")
         for index, item in enumerate(items, 1):
             display_id = item.get('displayId', 'N/A')
             title = item.get('title', item.get('subject', 'No Title'))
@@ -267,6 +272,7 @@ def main():
             sys.exit(0)
 
         if not choice:
+            should_fetch = False
             continue
 
         choice_lower = choice.lower().strip()
@@ -280,6 +286,7 @@ def main():
                 if not submission_uuid:
                     print("Error: Could not retrieve submission UUID.")
                     time.sleep(1.5)
+                    should_fetch = False
                     continue
                 
                 # Fetch full details
@@ -391,11 +398,13 @@ def main():
                         time.sleep(1.5)
                 
                 print()
+                should_fetch = False
                 continue
             else:
                 print(f"Number out of range. Please enter a number between 1 and {len(items)}.")
                 time.sleep(1.5)
                 print()
+                should_fetch = False
                 continue
         except ValueError:
             # Not a number, fallback to command choices
@@ -407,29 +416,34 @@ def main():
 
         elif choice_lower == 'p' and page > 1:
             page -= 1
+            should_fetch = True
             print()
             continue
 
         elif choice_lower == 'n':
             page += 1
+            should_fetch = True
             print()
             continue
 
         elif choice_lower == 'c':
             search_term = ""
             page = 1
+            should_fetch = True
             print()
             continue
 
         elif choice_lower.startswith('f '):
             search_term = choice[2:].strip()
             page = 1
+            should_fetch = True
             print()
             continue
 
         else:
             print("Invalid command.")
             time.sleep(1.5)
+            should_fetch = False
             print()
 
 if __name__ == '__main__':
