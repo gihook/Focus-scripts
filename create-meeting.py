@@ -9,7 +9,7 @@ import urllib.error
 
 CONFIG_FILE = ".config.json"
 
-from lib.utils import select_user
+from lib.utils import select_user, print_user_header
 
 class SameHostRedirectHandler(urllib.request.HTTPRedirectHandler):
     def redirect_request(self, req, fp, code, msg, headers, newurl):
@@ -156,7 +156,7 @@ def main():
 
     # Select the active user credentials
     username, cookie = select_user(users, args.user)
-    print(f"-> Active User: {username}")
+    print_user_header(username)
 
     # Show configuration and prompt for confirmation if not skipped via -y/--yes
     print("Configuration details:")

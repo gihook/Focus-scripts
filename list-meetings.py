@@ -11,7 +11,7 @@ import time
 
 CONFIG_FILE = ".config.json"
 
-from lib.utils import format_workflow_steps_ascii, select_user
+from lib.utils import format_workflow_steps_ascii, select_user, print_user_header, clear_screen, print_app_header, print_app_footer
 
 class SameHostRedirectHandler(urllib.request.HTTPRedirectHandler):
     def redirect_request(self, req, fp, code, msg, headers, newurl):
@@ -184,7 +184,7 @@ def main():
 
     # Prompt user to select which account to search with
     username, cookie = select_user(users, args.user)
-    print(f"-> Selected Search Requester Account: {username}\n")
+    print_user_header(username)
 
     headers = {
         'Accept': 'application/json, text/plain, */*',
@@ -275,6 +275,9 @@ def main():
                         print("Exiting.")
                         sys.exit(0)
 
+        clear_screen()
+        print_app_header(host)
+
         # Display meetings table
         print(f"\n--- Meetings (Page {page}){term_desc if search_term else ''} ---")
         for index, item in enumerate(items, 1):
@@ -294,6 +297,8 @@ def main():
             options_text.append("'c' to clear filter")
         options_text.append("'q' to quit")
         print("  " + " | ".join(options_text))
+
+        print_app_footer(username)
 
         try:
             choice = input("\nEnter choice: ").strip()
@@ -323,11 +328,12 @@ def main():
                 detail_url = f"{host}/meetings/{meeting_uuid}"
                 details = make_get_request(detail_url)
                 
-                # Print details cleanly
-                print_details_card(details)
-                
                 # Extract and list available actions inside subloop
                 while True:
+                    clear_screen()
+                    print_app_header(host)
+                    # Print details cleanly
+                    print_details_card(details)
                     # 1. Fetch normal meeting actions
                     meeting_actions = details.get('availableActions', [])
                     
@@ -394,6 +400,7 @@ def main():
                         print("  - None")
                         
                     print("="*50)
+                    print_app_footer(username)
                     
                     try:
                         act_choice = input("\nSelect an action number to execute (or press Enter to return): ").strip()
