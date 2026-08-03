@@ -12,15 +12,19 @@ A clean, robust, modular suite of Python scripts wrapped under a single, unified
 ├── .gitignore                 # Extensively configures untracked files
 ├── README.md                  # This documentation
 ├── run                        # UNIFIED CLI APP ENTRYPOINT
-├── lib/                       # SHARED MODULAR PACKAGE
-│   ├── __init__.py            # Package initialization marker
-│   └── utils.py               # Shared helpers (screen UI, select_user, ascii workflows)
 ├── login.py                   # Automated OIDC session login helper
-├── list-users.py              # Paginated user browser & terminal-auth helper
-├── list-submissions.py        # Screen-oriented submission browser & search filter
-├── list-meetings.py           # Screen-oriented meeting browser & search filter
-├── create-submission.py       # Submission creation helper
-├── create-meeting.py          # Meeting creation helper
+├── src/                       # SHARD MODULAR SOURCE PACKAGE (Standard src/ layout)
+│   ├── __init__.py            # Package initialization marker
+│   ├── utils.py               # Shared utility facade
+│   ├── config_loader.py       # Configuration and account selector helpers
+│   ├── form_parser.py         # Metadata form parser helpers
+│   ├── http_client.py         # HTTP redirection and session helpers
+│   ├── ui_renderer.py         # Screen renders, headers, footers, workflows
+│   ├── create_meeting.py      # Meeting creation handler
+│   ├── create_submission.py   # Submission creation handler
+│   ├── list_meetings.py       # Meeting search & execution CLI
+│   ├── list_submissions.py    # Submission search & execution CLI
+│   └── list_users.py          # User search & authentication CLI
 ├── submission-payloads/       # Custom payloads folder for Submissions
 │   └── 101.json               # Schema payload for Submission Type ID 101
 └── meeting-payloads/          # Custom payloads folder for Meetings

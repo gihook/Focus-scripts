@@ -81,20 +81,20 @@ def main():
             print_subcommand_help(subcommand)
             sys.exit(1)
             
-        module_name = "lib.list_submissions" if subcommand == "submission" else "lib.list_meetings"
+        module_name = "src.list_submissions" if subcommand == "submission" else "src.list_meetings"
         # Forward the ID (args[1]) and any other options
         cmd = [sys.executable, "-m", module_name, args[1]] + args[2:]
     else:
         # Map subcommand and action to script module path
         module_map = {
-            ("submission", "create"): "lib.create_submission",
-            ("submission", "list"): "lib.list_submissions",
-            ("submission", "search"): "lib.list_submissions",
-            ("meeting", "create"): "lib.create_meeting",
-            ("meeting", "list"): "lib.list_meetings",
-            ("meeting", "search"): "lib.list_meetings",
-            ("user", "list"): "lib.list_users",
-            ("user", "search"): "lib.list_users"
+            ("submission", "create"): "src.create_submission",
+            ("submission", "list"): "src.list_submissions",
+            ("submission", "search"): "src.list_submissions",
+            ("meeting", "create"): "src.create_meeting",
+            ("meeting", "list"): "src.list_meetings",
+            ("meeting", "search"): "src.list_meetings",
+            ("user", "list"): "src.list_users",
+            ("user", "search"): "src.list_users"
         }
         
         module_name = module_map.get((subcommand, action))
@@ -107,7 +107,7 @@ def main():
         remaining_args = args[2:]
         cmd = [sys.executable, "-m", module_name] + remaining_args
     
-    # Ensure root path is added to PYTHONPATH so modules inside lib can import lib.utils
+    # Ensure root path is added to PYTHONPATH so modules inside src can import src.utils
     env = os.environ.copy()
     root_dir = os.path.dirname(os.path.abspath(__file__))
     env["PYTHONPATH"] = root_dir + os.pathsep + env.get("PYTHONPATH", "")
