@@ -1,0 +1,51 @@
+{
+  "name": "Test name",
+  "nationality": "a212306b-bc7e-4078-ab5f-8cb5e22558f6",
+  "nationality__listItems": [
+    {
+      "id": "a212306b-bc7e-4078-ab5f-8cb5e22558f6",
+      "label": "American Samoan",
+      "description": "American Samoan"
+    }
+  ],
+  "current_salary": 1000,
+  "date_of_birth": "1990-05-02T10:00:00Z",
+  "current_entity": "Test CE",
+  "academic_qualification": "Test AQ",
+  "jobTitle": "Test JT",
+  "directorate": "Test D",
+  "sector": "Test S",
+  "department": "Test D",
+  "jobDetails_academicQualification": "Test AQ",
+  "current_degree": "b0d61f46-c6a2-44db-be37-6522496c8f41",
+  "current_degree__listItems": [
+    {
+      "id": "b0d61f46-c6a2-44db-be37-6522496c8f41",
+      "label": "1B",
+      "description": "1B"
+    }
+  ],
+  "total_salary_for_the_grade": 1001,
+  "security_approval": true,
+  "budget_availability": true,
+  "years_of_experience_required": 2,
+  "vacant": true,
+  "candidateJobTitle": "Test Jt",
+  "candidateDegree": "b0d61f46-c6a2-44db-be37-6522496c8f41",
+  "candidateDegree__listItems": [
+    {
+      "id": "b0d61f46-c6a2-44db-be37-6522496c8f41",
+      "label": "1B",
+      "description": "1B"
+    }
+  ],
+  "salary_calculation_mechanisam": "Test SCM",
+  "basic_salary": "Test BS",
+  "unitId__listItems": [
+    {
+      "id": "72e1d8be-9cc3-4afe-9912-d947f3b894a0",
+      "label": "HR Committee"
+    }
+  ],
+  "gross_salary": "Test GS"
+}
