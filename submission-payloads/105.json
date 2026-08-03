@@ -40,12 +40,12 @@
     }
   ],
   "salary_calculation_mechanisam": "Test SCM",
-  "basic_salary": "Test BS",
+  "basic_salary": 1000,
   "unitId__listItems": [
     {
       "id": "72e1d8be-9cc3-4afe-9912-d947f3b894a0",
       "label": "HR Committee"
     }
   ],
-  "gross_salary": "Test GS"
+  "gross_salary": 1001
 }
