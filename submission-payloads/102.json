@@ -1,0 +1,45 @@
+{
+  "name": "Test name",
+  "employment_id": "Test employment ID",
+  "date_of_appointment": "2026-08-12T10:00:00Z",
+  "nationality": "32a048e5-eb07-4403-9c94-5f3603c7b93f",
+  "nationality__listItems": [
+    {
+      "id": "32a048e5-eb07-4403-9c94-5f3603c7b93f",
+      "label": "Belarusian",
+      "description": "Belarusian"
+    }
+  ],
+  "academic_qualification": "Test AQ",
+  "total_number_of_years_of_experience": 2,
+  "reason_for_transfer": "Test reason",
+  "job_title": "Test PJT",
+  "proposed_name": "Test NJT",
+  "current_grade": "cf4e849d-d8f7-40a9-9661-432df3a379e0",
+  "current_grade__listItems": [
+    {
+      "id": "cf4e849d-d8f7-40a9-9661-432df3a379e0",
+      "label": "1C",
+      "description": "1C"
+    }
+  ],
+  "proposed_grade": "c9b3a314-5f86-4bba-a9ee-39df028fba12",
+  "proposed_grade__listItems": [
+    {
+      "id": "c9b3a314-5f86-4bba-a9ee-39df028fba12",
+      "label": "2A",
+      "description": "2A"
+    }
+  ],
+  "department_sector": "Test D/S",
+  "division_to": "Test TD",
+  "entity_from": "Test FE",
+  "entity_to": "Test TE",
+  "unitId__listItems": [
+    {
+      "id": "3f2d5f75-f87b-4df6-a95d-f3894f4c0c41",
+      "label": "HR Operations"
+    }
+  ],
+  "human_resources_department_recommendation": "<p>test RTE</p>"
+}

@@ -11,6 +11,15 @@ import re
 
 CONFIG_FILE = ".config.json"
 
+class HttpCompatibleCookieJar(http.cookiejar.CookieJar):
+    """
+    Subclass of CookieJar that forces cookie.secure = False.
+    This prevents urllib's CookieJar from silently suppressing cookies over non-secure HTTP (such as localhost).
+    """
+    def set_cookie(self, cookie):
+        cookie.secure = False
+        super().set_cookie(cookie)
+
 from src.utils import (
     select_user, print_user_header, clear_screen, print_app_header, print_app_footer,
     load_config, extract_xsrf_token
@@ -36,7 +45,7 @@ def parse_arguments():
 def login_user(host, email, config, full_name=None, designation=None):
     display_user = f"'{full_name}' ({designation})" if full_name and designation else f"'{email}'"
     print(f" -> Initiating login flow for user {display_user} against '{host}'...")
-    cookie_jar = http.cookiejar.CookieJar()
+    cookie_jar = HttpCompatibleCookieJar()
     handler = urllib.request.HTTPCookieProcessor(cookie_jar)
     opener = urllib.request.build_opener(handler)
 

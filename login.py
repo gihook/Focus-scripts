@@ -11,6 +11,15 @@ import re
 
 CONFIG_FILE = ".config.json"
 
+class HttpCompatibleCookieJar(http.cookiejar.CookieJar):
+    """
+    Subclass of CookieJar that forces cookie.secure = False.
+    This prevents urllib's CookieJar from silently suppressing cookies over non-secure HTTP (such as localhost).
+    """
+    def set_cookie(self, cookie):
+        cookie.secure = False
+        super().set_cookie(cookie)
+
 def parse_arguments():
     parser = argparse.ArgumentParser(description="Log in to Rationaletech CHub and save session cookies.")
     parser.add_argument(
@@ -52,7 +61,7 @@ def main():
     print(f"\nInitiating login flow for user '{email}' against '{host}'...")
 
     # Set up cookie jar and HTTP opener
-    cookie_jar = http.cookiejar.CookieJar()
+    cookie_jar = HttpCompatibleCookieJar()
     handler = urllib.request.HTTPCookieProcessor(cookie_jar)
     opener = urllib.request.build_opener(handler)
 
@@ -132,7 +141,7 @@ def main():
             if "User Account Not Found" in body:
                 print(f"Details: User account '{email}' not found.", file=sys.stderr)
             else:
-                print(f"Response: {body[:300]}", file=sys.stderr)
+                print(f"Response: {body}", file=sys.stderr)
         except Exception:
             pass
         sys.exit(1)
